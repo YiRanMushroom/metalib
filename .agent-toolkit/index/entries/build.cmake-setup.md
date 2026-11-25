@@ -42,3 +42,17 @@ Non-obvious points:
   22.1 has no P2996 and fails at configure (`unknown argument: '-freflection-latest'`), so CLion's clang
   `cmake-build-debug` profile fails. See [[reflection.expansion-statements]] for what each compiler accepts.
 - Toolchain verified: C:/mingw64-gcc-16.1 g++ 16.1.0, plus CMake 4.4.2 and ninja bundled with CLion 2026.3.
+
+## CLion code insight (checked through the CLion MCP, 2026-11-25)
+- CLion analyses with the MinGW-trunk toolchain (profile Debug-MinGW-trunk, -std=gnu++26 -freflection) and its engine
+  (ReSharper C++) does evaluate splices, substitute, dealias, template_arguments_of, display_string_of, size_of,
+  std::ranges::sort / stable_sort / unique - but not std::meta::type_order. Every kind is a splice of a sorted ability
+  list, so with type_order all of them failed: 113 errors in handle.hpp, all "Cannot substitute template argument X
+  for type template parameter ...", plus the same in tests. Probes: a computed splice works, one type_order call
+  fails, sorting by display_string_of works.
+- Fix: details::type_less uses type_order only when !defined(__CLION_IDE__) (CLion defines it during analysis);
+  the IDE orders by display_string_of. Real compiles are unchanged. After it: handle.hpp and most tests 0 errors.
+- Remaining IDE-only errors are CLion's evaluator disagreeing with GCC: a u8 identifier comparison with non-ASCII
+  text, and extract with a wrong type not throwing (misc_test 43, 46, 47). GCC passes these.
+- get_file_problems often times out (60-280 s) on larger tests and headers; results can be stale right after an
+  edit (query again).

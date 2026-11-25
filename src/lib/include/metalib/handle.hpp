@@ -23,7 +23,7 @@ namespace metalib {
 
     namespace details {
         consteval bool type_less(std::meta::info a, std::meta::info b) {
-#if defined(__cpp_lib_type_order)
+#if defined(__cpp_lib_type_order) && !defined(__CLION_IDE__)
             return std::meta::type_order(a, b) < 0;
 #else
             return std::meta::display_string_of(a) < std::meta::display_string_of(b);
