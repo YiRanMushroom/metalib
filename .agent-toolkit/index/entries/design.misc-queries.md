@@ -49,3 +49,10 @@ working draft [meta.reflection.queries] has-type lists value, annotation, object
 non-static data member, unnamed bit-field, direct base, data member description, function parameter - not
 structured bindings - and type_of "Throws: meta::exception unless has-type(r)". So the kind gets no typed.
 Little practical need to reflect bindings (like locals); support is mainly for completeness.
+
+extract (probe: scratchpad extract_cases/, 2026-11-25): constant::extract<T>() returns meta_result<T> (via attempt) and
+is on value, object, annotation, enumerator, data_member, static_data_member, member_function,
+static_member_function, function, variable. GCC trunk: extract<int S::*>(data member), extract<R (S::*)(..) cv>(member
+function), extract<R (*)(..)>(function) work; a wrong type throws; extract<int&>(^^variable) throws, extract<int&>(
+object_of(variable)) works; extract<int>/extract<int*> of a non-constexpr variable is a hard error (not catchable).
+meta_result<T&> works (libstdc++ has optional<T&>; meta_result forwards instead of moving).

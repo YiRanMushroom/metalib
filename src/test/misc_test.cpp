@@ -29,13 +29,23 @@ static_assert(!mb::type{^^int (*)(char)}.invoke_result_with({mb::type{^^A}}).has
 static_assert(mb::type{^^int const &}.reference_constructs_from_temporary(mb::type{^^long}));
 // annotations, values, objects
 constexpr auto anns = mb::type{^^A}.annotations();
-static_assert(anns.size() == 2 && anns[0].extract<int>() == 1 && anns[1].type() == mb::type{^^double});
-static_assert(anns[0].constant_of().try_into<mb::value>().unwrap().extract<int>() == 1);
+static_assert(anns.size() == 2 && anns[0].extract<int>().unwrap() == 1 && anns[1].type() == mb::type{^^double});
+static_assert(anns[0].constant_of().try_into<mb::value>().unwrap().extract<int>().unwrap() == 1);
 static_assert(mb::handle{anns[0].info}.try_into<mb::annotation>().has_value() && !mb::handle{^^A}.try_into<mb::annotation>().has_value());
-static_assert(mb::reflect_constant(42).try_into<mb::value>().unwrap().extract<int>() == 42);
+static_assert(mb::reflect_constant(42).try_into<mb::value>().unwrap().extract<int>().unwrap() == 42);
 static_assert(mb::reflect_object(gv).type() == tint);
 static_assert(mb::reflect_function(takes).try_into<mb::function>().has_value());
 static_assert(mb::variable{^^gv}.object().unwrap() == mb::reflect_object(gv));
+// extract: member and function pointers directly, references to variables through object()
+struct E { int x = 1; static int sv; int f() const { return 3; } };
+int E::sv = 7;
+constexpr auto ex = mb::class_type{^^E}.members<mb::data_member>(ctx)[0];
+static_assert(ex.extract<int E::*>().unwrap() == &E::x && !ex.extract<long E::*>().has_value());
+static_assert(mb::class_type{^^E}.members<mb::member_function>(ctx)[0].extract<int (E::*)() const>().unwrap() == &E::f);
+static_assert(mb::function{^^takes}.extract<void (*)(int)>().unwrap() == &takes);
+static_assert(!mb::variable{^^gv}.extract<int &>().has_value() && &mb::variable{^^gv}.object().unwrap().extract<int &>().unwrap() == &gv);
+static_assert(&mb::static_data_member{^^E::sv}.object().unwrap().extract<int &>().unwrap() == &E::sv);
+static_assert(mb::variable{^^cv}.extract<int>().unwrap() == 3);
 // structured bindings, subobjects, parameters, source locations, operators
 static_assert(mb::handle{^^s1}.try_into<mb::structured_binding>().unwrap().ascii_identifier().unwrap() == "s1");
 static_assert(mb::class_type{^^B}.subobjects(ctx).size() == 2);

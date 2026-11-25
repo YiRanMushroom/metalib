@@ -16,10 +16,10 @@ is another kind's ability set, flattened in).
 | `parameter` | `parented`, `identifiable`, `displayable`, `annotatable`, `typed`, `parameter_entity` |
 | `enumerator` | `identifiable`, `displayable`, `annotatable`, `typed`, `constant`, `enumerator_entity`, `parented` |
 | `member` | `parented`, `identifiable`, `displayable`, `annotatable`, `accessible`, `class_member` |
-| `data_member` | **member**, `typed`, `sized`, `nonstatic_data` |
-| `static_data_member` | **member**, `templated`, `typed`, `sized`, `linkage`, `storage_duration`, `static_data` |
-| `member_function` | **member**, `templated`, `typed`, `callable`, `signature`, `overridable`, `explicit_specifier`, `nonstatic_function` |
-| `static_member_function` | **member**, `templated`, `typed`, `callable`, `signature`, `static_function` |
+| `data_member` | **member**, `typed`, `sized`, `nonstatic_data`, `constant` |
+| `static_data_member` | **member**, `templated`, `typed`, `sized`, `linkage`, `storage_duration`, `static_data`, `constant` |
+| `member_function` | **member**, `templated`, `typed`, `callable`, `signature`, `overridable`, `explicit_specifier`, `nonstatic_function`, `constant` |
+| `static_member_function` | **member**, `templated`, `typed`, `callable`, `signature`, `static_function`, `constant` |
 | `constructor` | `parented`, `displayable`, `annotatable`, `accessible`, `callable`, `explicit_specifier`, `constructor_entity` |
 | `destructor` | `parented`, `displayable`, `annotatable`, `accessible`, `callable`, `overridable`, `destructor_entity` |
 | `base` | `displayable`, `annotatable`, `typed`, `accessible`, `virtual_specifier`, `base_entity`, `parented` |
@@ -31,8 +31,8 @@ is another kind's ability set, flattened in).
 | `namespace_` | `parented`, `identifiable`, `displayable`, `annotatable`, `namespace_entity` |
 | `namespace_alias` | `parented`, `identifiable`, `displayable`, `namespace_alias_entity` |
 | `namespace_member` | `parented`, `identifiable`, `displayable`, `annotatable`, `namespace_member_entity` |
-| `variable` | **namespace_member**, `templated`, `typed`, `sized`, `linkage`, `storage_duration`, `variable_entity` |
-| `function` | **namespace_member**, `templated`, `typed`, `callable`, `signature`, `linkage`, `function_entity` |
+| `variable` | **namespace_member**, `templated`, `typed`, `sized`, `linkage`, `storage_duration`, `variable_entity`, `constant` |
+| `function` | **namespace_member**, `templated`, `typed`, `callable`, `signature`, `linkage`, `function_entity`, `constant` |
 | `value` | `displayable`, `typed`, `constant`, `value_entity` |
 | `object` | `displayable`, `typed`, `constant`, `object_entity` |
 | `annotation` | `displayable`, `typed`, `constant`, `annotation_entity` |
@@ -215,6 +215,13 @@ Requirement: an enumerator.
 ### `parameter_entity`
 Requirement: a function parameter.
 `has_default_argument`, `is_explicit_object_parameter`, `variable`
+
+### Notes on `extract<T>()`
+
+Returns `meta_result<T>` (thrown `std::meta::exception` becomes a failure). Member and function pointers come
+straight from data members and functions (`d.extract<int S::*>()`, `f.extract<int (S::*)() const>()`); a reference
+to a variable needs the object first (`v.object().unwrap().extract<int &>()`); reading the value of a variable that
+is not usable in constant expressions is a hard compile error, not a failure.
 
 ## Free functions
 

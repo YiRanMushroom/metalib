@@ -84,7 +84,7 @@ structural, usable in `template for`, as template arguments and at runtime.
 template<class E>
 constexpr std::string_view name_of(E v) {
     template for (constexpr mb::enumerator e : mb::enum_type{^^E}.enumerators()) {
-        if (v == e.extract<E>()) return e.ascii_identifier().unwrap();
+        if (v == e.extract<E>().unwrap()) return e.ascii_identifier().unwrap();
     }
     return {};
 }

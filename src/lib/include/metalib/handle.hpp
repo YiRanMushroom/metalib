@@ -223,13 +223,13 @@ namespace metalib {
             , ability::constant, ability::enumerator_entity, ability::parented>;
         using member = ability_set<ability::parented, ability::identifiable, ability::displayable, ability::annotatable,
             ability::accessible, ability::class_member>;
-        using data_member = ability_set<member, ability::typed, ability::sized, ability::nonstatic_data>;
+        using data_member = ability_set<member, ability::typed, ability::sized, ability::nonstatic_data, ability::constant>;
         using static_data_member = ability_set<member, ability::templated, ability::typed, ability::sized, ability::linkage,
-            ability::storage_duration, ability::static_data>;
+            ability::storage_duration, ability::static_data, ability::constant>;
         using member_function = ability_set<member, ability::templated, ability::typed, ability::callable, ability::signature,
-            ability::overridable, ability::explicit_specifier, ability::nonstatic_function>;
+            ability::overridable, ability::explicit_specifier, ability::nonstatic_function, ability::constant>;
         using static_member_function = ability_set<member, ability::templated, ability::typed, ability::callable, ability::signature,
-            ability::static_function>;
+            ability::static_function, ability::constant>;
         using constructor = ability_set<ability::parented, ability::displayable, ability::annotatable,
             ability::accessible, ability::callable, ability::explicit_specifier, ability::constructor_entity>;
         using destructor = ability_set<ability::parented, ability::displayable, ability::annotatable,
@@ -250,9 +250,9 @@ namespace metalib {
             ability::annotatable,
             ability::namespace_member_entity>;
         using variable = ability_set<namespace_member, ability::templated, ability::typed, ability::sized, ability::linkage,
-            ability::storage_duration, ability::variable_entity>;
+            ability::storage_duration, ability::variable_entity, ability::constant>;
         using function = ability_set<namespace_member, ability::templated, ability::typed, ability::callable, ability::signature,
-            ability::linkage, ability::function_entity>;
+            ability::linkage, ability::function_entity, ability::constant>;
         using value = ability_set<ability::displayable, ability::typed, ability::constant, ability::value_entity>;
         using object = ability_set<ability::displayable, ability::typed, ability::constant, ability::object_entity>;
         using annotation = ability_set<ability::displayable, ability::typed, ability::constant,
@@ -809,8 +809,8 @@ namespace metalib {
 
         struct constant {
             template<typename T>
-            consteval T extract(this handle const &self) {
-                return std::meta::extract<T>(self.info);
+            consteval meta_result<T> extract(this handle const &self) {
+                return details::attempt<T>([&]() -> T { return std::meta::extract<T>(self.info); });
             }
         };
 

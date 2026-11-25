@@ -56,7 +56,7 @@ namespace metalib {
     template<typename T>
     class meta_result {
     public:
-        constexpr meta_result(T value) : m_value(std::move(value)) {
+        constexpr meta_result(T value) : m_value(std::forward<T>(value)) {
         }
 
         constexpr meta_result(meta_exception error) : m_error(std::move(error)) {
@@ -88,7 +88,7 @@ namespace metalib {
         }
 
         constexpr T unwrap_or(T fallback) const {
-            return m_value ? *m_value : std::move(fallback);
+            return m_value ? *m_value : std::forward<T>(fallback);
         }
 
         constexpr meta_exception const &error() const {
