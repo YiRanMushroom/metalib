@@ -15,7 +15,7 @@ title = "Status"
   kinds/abilities change).
 
 ## Verified
-- GCC trunk (C:/mingw64-gcc-trunk, gcc-17-20261122) on Windows: CMake build + ctest 14/14 (src/test, one executable
+- GCC trunk (C:/mingw64-gcc-trunk, gcc-17-20261122) on Windows: CMake build + ctest 16/16 (src/test, one executable
   per file, mostly static_asserts; identifier_test also built with METALIB_HAS_META_EXCEPTION=0), 2026-11-25.
 - Not verified: any clang (clang-p2996 still uses the old consteval-only type model and is expected to reject parts),
   GCC 16.x (rejects meta_result with info), compile-time cost on large code.
@@ -30,5 +30,16 @@ title = "Status"
 
 ## Open / next
 - Git: private GitHub repo YiRanMushroom/metalib (personal account; this repo's git config uses the personal email).
-- Possible next steps: compile-time measurements; clang support once clang adopts P4101; ergonomic helpers on top
-  of the thin layer (the user wants thin translation first).
+- Helper review with the user (2026-11-25): the thin layer is considered sufficient. Not wanted (easy enough with the
+  current API): field access / for_each_field, enum utilities, annotation_of<T> (annotations() + filter),
+  is_specialization_of / type_name, aggregate builders (define_aggregate is direct enough).
+  Done the same day: metalib::cache (variable templates members / bases / subobjects / enumerators / parameters /
+  template_arguments keyed by a kind value; access::unprivileged or access::unchecked since a variable template cannot
+  see the caller's scope; annotations not cached) and message.hpp (message(parts...) -> std::string usable as a
+  static_assert message; to_string / to_u8string). Narrowing failures now read "reflection '<display>' is not <req>".
+  300 repeated member queries: 4.0 s direct vs 2.5 s cached (base include 1.6 s).
+- Overloaded names: ^^f on an overload set is a hard error; select one overload by name (members + of_name) or pass
+  an expression designating one function to reflect_function (e.g. through a cast to the function pointer type).
+- Measured 2026-11-25 (GCC trunk, -fsyntax-only): <meta> alone 1.0 s, + metalib.hpp 1.6 s (parsing 84%, constant
+  evaluation ~0.24 s). CLion's analysis is the slow part (60-280 s per test file, often times out).
+- Clang support once clang adopts P4101.

@@ -37,7 +37,7 @@ static_assert(cs.members<mb::nested_alias>(ctx)[1] == mb::type{^^S::defined});
 // checked narrowing
 static_assert(mb::handle{^^S::defined}.try_into<mb::nested_class>().has_value());
 static_assert(!mb::handle{^^S::alias}.try_into<mb::nested_class>().has_value());
-static_assert(mb::nested_class::from(mb::handle{^^S::alias}).error().u8what() == u8"reflection is not a declaration that is not a type alias");
+static_assert(mb::nested_class::from(mb::handle{^^S::alias}).error().u8what().ends_with(u8"' is not a declaration that is not a type alias"));
 static_assert(!mb::handle{^^S::declared_only}.try_into<mb::nested_class>().has_value() && mb::handle{^^S::declared_only}.try_into<mb::nested_type>().has_value());
 static_assert(!mb::handle{^^S::defined}.try_into<mb::nested_union>().has_value());
 TEST_CASE("nested type: compile-time checks") {

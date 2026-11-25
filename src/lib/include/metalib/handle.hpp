@@ -94,7 +94,8 @@ namespace metalib {
         consteval void first_unmet_requirement(std::u8string &unmet, std::meta::info r) {
             if constexpr (requires { Ability::check(r); }) {
                 if (unmet.empty() && !Ability::check(r)) {
-                    unmet = std::u8string(u8"reflection is not ") + std::u8string(Ability::requirement);
+                    unmet = std::u8string(u8"reflection '") + std::u8string(std::meta::u8display_string_of(r))
+                            + std::u8string(u8"' is not ") + std::u8string(Ability::requirement);
                 }
             }
         }

@@ -60,7 +60,7 @@ using class_type = basic_interface<>::with_ability<details::ability_sets::class_
 ### Narrowing
 
 - Checked: `h.try_into<K>()` / `K::from(h)` return `meta_result<K>`; `K::holds(info)` tests. The failure
-  message names the first unmet requirement, e.g. `reflection is not a class type`.
+  message names the reflection and the first unmet requirement, e.g. `reflection 'int' is not a class type`.
 - Unchecked: the explicit constructor `K{info}`, for when the kind is certain.
 
 ### Equality
@@ -103,6 +103,28 @@ cls.members<mb::data_member>(ctx, {}, mb::transform::from(&mb::data_member::type
 ns.members<mb::variable>();        // namespaces work the same way
 ```
 
+### Cached queries (cache.hpp)
+
+`metalib::cache::members<Scope, Kind = void, access = access::unprivileged>` is a variable template holding the
+result of `Scope.members<Kind>(ctx)`; it is computed once per translation unit and every use refers to the same
+array, which also cuts compile time when the same query is repeated (300 repeated queries: 4.0 s direct, 2.5 s
+cached, GCC trunk). `Scope` is a kind value (handles are structural), e.g.
+`mb::cache::members<mb::class_type{^^S}, mb::data_member>`. A variable template cannot see the caller's scope, so the
+access is `access::unprivileged` (public members) or `access::unchecked` (everything). Also `cache::bases`,
+`cache::subobjects`, `cache::enumerators`, `cache::parameters`, `cache::template_arguments`. Annotations are
+not cached because their result depends on where they are queried.
+
+### Messages (message.hpp)
+
+`metalib::message(parts...)` builds a `std::string` from text, handles (their display string), integers, bools and
+chars; it can be used directly as a C++26 `static_assert` message. `to_string(h)` / `to_u8string(h)` give one
+handle's display string.
+
+```cpp
+static_assert(m.type() == mb::type{^^int}, mb::message("member ", m, " must have type int, has ", m.type()));
+// error: static assertion failed: member S::x must have type int, has double
+```
+
 ### Parents
 
 Every declaration kind has `has_parent()` and `parent()` → `meta_result<handle>`; narrow it yourself:
@@ -143,7 +165,7 @@ Tests (Catch2, fetched by CMake) live in `src/test`, one executable per file. Al
 ## Layout
 
 - `src/lib/include/metalib/`: `handle.hpp` (kinds and abilities), `meta_result.hpp`, `literal.hpp`,
-  `query.hpp`, `encoding.hpp`, `metalib.hpp`.
+  `query.hpp`, `cache.hpp`, `message.hpp`, `encoding.hpp`, `metalib.hpp`.
 - `src/test/`: tests.
 - `docs/reference.md`: kinds, abilities and functions.
 - `.agent-toolkit/index/entries/`: design notes and investigation results kept with the project (`status.md` is

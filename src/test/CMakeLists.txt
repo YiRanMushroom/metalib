@@ -34,11 +34,13 @@ endfunction()
 set(metalib_test_sources
         ability_set_test.cpp
         ability_test.cpp
+        cache_test.cpp
         class_test.cpp
         enumerator_test.cpp
         flatten_test.cpp
         identifier_test.cpp
         kinds_test.cpp
+        message_test.cpp
         meta_result_runtime_test.cpp
         misc_test.cpp
         namespace_test.cpp

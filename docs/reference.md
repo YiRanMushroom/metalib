@@ -44,7 +44,7 @@ is another kind's ability set, flattened in).
 ## Abilities
 
 An ability with a requirement takes part in `holds` / `from` / `try_into`; the failure message is
-"reflection is not <requirement>". Functions are members of every kind that has the ability.
+"reflection '<display string>' is not <requirement>". Functions are members of every kind that has the ability.
 
 ### `identifiable`
 `has_ascii_identifier`, `has_u8_identifier`, `ascii_identifier`, `u8_identifier`
@@ -238,6 +238,25 @@ is not usable in constant expressions is a hard compile error, not a failure.
 | `data_member_spec(type, options = {})` | `meta_result<data_member_description>` |
 | `define_aggregate(type, descriptions)` | `meta_result<type>` (call from a `consteval {}` block) |
 | `global_namespace` | `namespace_{^^::}` (a constant) |
+
+## Cached queries: `metalib::cache` (cache.hpp)
+
+| variable template | value |
+|---|---|
+| `members<Scope, Kind = void, A = access::unprivileged>` | `Scope.members<Kind>(ctx)` (`Kind = void`: the scope's default kind) |
+| `bases<Class, A>`, `subobjects<Class, A>` | `Class.bases(ctx)`, `Class.subobjects(ctx)` |
+| `enumerators<Enum>` | `Enum.enumerators()` |
+| `parameters<Function>` | `Function.parameters()` |
+| `template_arguments<Specialization>` | `Specialization.template_arguments()` (a `meta_result`) |
+
+`access::unprivileged` uses `access_context::unprivileged()`, `access::unchecked` uses `access_context::unchecked()`.
+
+## Messages (message.hpp)
+
+| function | result |
+|---|---|
+| `to_string(h)`, `to_u8string(h)` | display string of a handle |
+| `message(parts...)` | `std::string` from text (anything convertible to `string_view`), handles, integers, bools, chars |
 
 ## Queries: `metalib::predicate` and `metalib::transform` (query.hpp)
 
