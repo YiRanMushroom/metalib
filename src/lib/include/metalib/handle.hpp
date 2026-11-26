@@ -85,10 +85,20 @@ namespace metalib {
         consteval std::meta::info canonical_interface(std::vector<std::meta::info> const &abilities) {
             return std::meta::substitute(^^basic_interface, canonical_abilities(abilities));
         }
+
+        consteval std::meta::info set_except(std::meta::info set, std::vector<std::meta::info> const &removed) {
+            std::vector<std::meta::info> kept = canonical_abilities({set});
+            std::vector<std::meta::info> const dropped = canonical_abilities(removed);
+            std::erase_if(kept, [&](std::meta::info ability) { return std::ranges::contains(dropped, ability); });
+            return std::meta::substitute(^^std::tuple, kept);
+        }
     }
 
     template<typename... Abilities>
     using ability_set = typename [:details::canonical_set({^^Abilities...}):];
+
+    template<typename Set, typename... Removed>
+    using except = typename [:details::set_except(^^Set, {^^Removed...}):];
 
     class handle;
 
@@ -175,6 +185,9 @@ namespace metalib {
 
         template<typename... More>
         using with_ability = typename [:details::canonical_interface({^^abilities, ^^More...}):];
+
+        template<typename... Removed>
+        using without_ability = typename [:details::canonical_interface({^^except<abilities, Removed...>}):];
 
         basic_interface() = default;
 
@@ -284,6 +297,9 @@ namespace metalib {
         struct function_entity;
         struct linkage;
         struct storage_duration;
+        template<typename T>
+        struct typed_as;
+        struct constant_entity;
         struct value_entity;
         struct object_entity;
         struct annotation_entity;
@@ -340,6 +356,8 @@ namespace metalib {
             ability::linkage, ability::storage_duration, ability::variable_entity, ability::constant>;
         using function = ability_set<namespace_member, ability::templated, ability::typed, ability::callable,
             ability::signature, ability::linkage, ability::function_entity, ability::constant>;
+        using constant = ability_set<ability::displayable, ability::typed, ability::constant,
+            ability::constant_entity>;
         using value = ability_set<ability::displayable, ability::typed, ability::constant, ability::value_entity>;
         using object = ability_set<ability::displayable, ability::typed, ability::constant, ability::object_entity>;
         using annotation = ability_set<ability::displayable, ability::typed, ability::constant,
@@ -378,9 +396,22 @@ namespace metalib {
     using namespace_member = basic_interface<>::with_ability<details::ability_sets::namespace_member>;
     using variable = basic_interface<>::with_ability<details::ability_sets::variable>;
     using function = basic_interface<>::with_ability<details::ability_sets::function>;
+    using constant = basic_interface<>::with_ability<details::ability_sets::constant>;
     using value = basic_interface<>::with_ability<details::ability_sets::value>;
     using object = basic_interface<>::with_ability<details::ability_sets::object>;
     using annotation = basic_interface<>::with_ability<details::ability_sets::annotation>;
+
+    template<typename T>
+    using typed_constant =
+        basic_interface<>::with_ability<except<details::ability_sets::constant, ability::constant>, ability::typed_as<T>>;
+
+    template<typename T>
+    using typed_object =
+        basic_interface<>::with_ability<except<details::ability_sets::object, ability::constant>, ability::typed_as<T>>;
+
+    template<typename T>
+    using typed_annotation =
+        basic_interface<>::with_ability<except<details::ability_sets::annotation, ability::constant>, ability::typed_as<T>>;
     using structured_binding = basic_interface<>::with_ability<details::ability_sets::structured_binding>;
     using template_ = basic_interface<>::with_ability<details::ability_sets::template_>;
     using data_member_description = basic_interface<>::with_ability<details::ability_sets::data_member_description>;
@@ -1025,6 +1056,30 @@ namespace metalib {
 
             consteval std::vector<annotation> get_annotations_with_type(this handle const &self,
                                                                           type const &annotation_type);
+
+            template<typename T>
+            consteval auto get_annotations_with_type(this handle const &self);
+        };
+
+        template<typename T>
+        struct typed_as {
+            static constexpr std::u8string_view requirement =
+                std::define_static_string(u8"of type " + std::u8string(std::meta::u8display_string_of(^^T)));
+
+            static consteval bool check(std::meta::info r) {
+                std::optional<std::meta::info> const found = details::type_if_any(r);
+                return found && std::meta::dealias(std::meta::remove_cv(*found)) == std::meta::dealias(^^T);
+            }
+
+            consteval meta_result<T> try_extract(this handle const &self) {
+                return details::attempt<T>(
+                    [&]() -> T { return std::meta::extract<T>(self.info); },
+                    [&] { return details::unable({}, details::template_call_of(u8"extract", {^^T}), u8"from", self.info); });
+            }
+
+            consteval T extract(this handle const &self) {
+                return details::attach_ability_unchecked<typed_as>(self).try_extract().unwrap();
+            }
         };
 
         struct constant {
@@ -1463,6 +1518,22 @@ namespace metalib {
             }
         };
 
+        struct constant_entity {
+            static constexpr std::u8string_view requirement = u8"a constant";
+
+            static consteval bool check(std::meta::info r) {
+                return std::meta::is_value(r) || std::meta::is_object(r);
+            }
+
+            consteval bool is_value_constant(this handle const &self) {
+                return std::meta::is_value(self.info);
+            }
+
+            consteval bool is_object_constant(this handle const &self) {
+                return std::meta::is_object(self.info);
+            }
+        };
+
         struct value_entity {
             static constexpr std::u8string_view requirement = u8"a value";
 
@@ -1486,9 +1557,7 @@ namespace metalib {
                 return std::meta::is_annotation(r);
             }
 
-            consteval handle get_constant(this handle const &self) {
-                return handle{std::meta::constant_of(self.info)};
-            }
+            consteval metalib::constant get_constant(this handle const &self);
         };
 
         struct structured_binding_entity {
@@ -1743,16 +1812,29 @@ namespace metalib {
         return std::meta::reference_converts_from_temporary(self.info, source.info);
     }
 
+    consteval constant ability::annotation_entity::get_constant(this handle const &self) {
+        return details::reflect_unchecked<metalib::constant>(std::meta::constant_of(self.info));
+    }
+
     template<typename T>
         requires std::is_copy_constructible_v<std::decay_t<T>>
-    consteval handle reflect_constant(T const &constant) {
-        return handle{std::meta::reflect_constant(constant)};
+    consteval auto reflect_constant(T const &value) {
+        if constexpr (std::is_class_v<T> || std::is_union_v<T>) {
+            return details::reflect_unchecked<typed_object<T>>(std::meta::reflect_constant(value));
+        } else {
+            return details::reflect_unchecked<typed_constant<T>>(std::meta::reflect_constant(value));
+        }
     }
 
     template<typename T>
         requires (!std::is_function_v<T>)
-    consteval object reflect_object(T &target) {
-        return details::reflect_unchecked<object>(std::meta::reflect_object(target));
+    consteval typed_object<std::remove_cv_t<T>> reflect_object(T &target) {
+        return details::reflect_unchecked<typed_object<std::remove_cv_t<T>>>(std::meta::reflect_object(target));
+    }
+
+    template<typename T>
+    consteval auto ability::annotatable::get_annotations_with_type(this handle const &self) {
+        return details::handles_of<typed_annotation<T>>(std::meta::annotations_of_with_type(self.info, ^^T));
     }
 
     template<typename F>
@@ -1762,13 +1844,13 @@ namespace metalib {
     }
 
     template<std::ranges::input_range R>
-    consteval handle reflect_constant_string(R &&text) {
-        return handle{std::meta::reflect_constant_string(std::forward<R>(text))};
+    consteval object reflect_constant_string(R &&text) {
+        return details::reflect_unchecked<object>(std::meta::reflect_constant_string(std::forward<R>(text)));
     }
 
     template<std::ranges::input_range R>
-    consteval handle reflect_constant_array(R &&elements) {
-        return handle{std::meta::reflect_constant_array(std::forward<R>(elements))};
+    consteval object reflect_constant_array(R &&elements) {
+        return details::reflect_unchecked<object>(std::meta::reflect_constant_array(std::forward<R>(elements)));
     }
 
     consteval meta_result<handle>

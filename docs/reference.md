@@ -33,6 +33,8 @@ is another kind's ability set, flattened in).
 | `namespace_member` | `parented`, `identifiable`, `displayable`, `annotatable`, `namespace_member_entity` |
 | `variable` | **namespace_member**, `templated`, `typed`, `sized`, `linkage`, `storage_duration`, `variable_entity`, `constant` |
 | `function` | **namespace_member**, `templated`, `typed`, `callable`, `signature`, `linkage`, `function_entity`, `constant` |
+| `constant` | `displayable`, `typed`, `constant`, `constant_entity` |
+| `typed_constant<T>`, `typed_object<T>`, `typed_annotation<T>` | **constant** / **object** / **annotation** without `constant`, plus `typed_as<T>` |
 | `value` | `displayable`, `typed`, `constant`, `value_entity` |
 | `object` | `displayable`, `typed`, `constant`, `object_entity` |
 | `annotation` | `displayable`, `typed`, `constant`, `annotation_entity` |
@@ -57,6 +59,7 @@ something computed, `make_` for something constructed. An operation that cannot 
 | `h.into<K>()`, `K::from(h)` | `K`: `h.try_into<K>().unwrap()` |
 | `result.try_into<K>()`, `result.into<K>()` | the same on a `meta_result` holding a handle; a failed `result` keeps its error |
 | `k.try_attach_ability<A...>()`, `k.attach_ability<A...>()` | `meta_result<K::with_ability<A...>>` / `K::with_ability<A...>`: more abilities on the same reflection |
+| `K::without_ability<A...>`, `except<Set, A...>` | the kind / ability set without those abilities |
 | `K::holds(r)` | `bool` |
 | `K{}` | a null reflection |
 | `details::reflect_unchecked<K>(r)` | internal: unchecked construction (the friend of a private constructor) |
@@ -111,7 +114,8 @@ members of every kind that has the ability; a function that can fail is listed a
 `has_template_arguments`, `try_get_template` / `get_template`, `try_get_template_arguments` / `get_template_arguments`
 
 ### `annotatable`
-`get_annotations`, `get_annotations_with_type`
+`get_annotations`, `get_annotations_with_type(type)` (returns `annotation`s), `get_annotations_with_type<T>()` (returns
+`typed_annotation<T>`s)
 
 ### `constant`
 `try_extract` / `extract`
@@ -216,6 +220,14 @@ Requirement: a variable.
 Requirement: a function.
 (check only)
 
+### `typed_as<T>`
+Requirement: of type `T` (cv-qualification ignored).
+`try_extract` / `extract` (no template argument; returns `T`)
+
+### `constant_entity`
+Requirement: a constant.
+`is_value_constant`, `is_object_constant`
+
 ### `value_entity`
 Requirement: a value.
 (check only)
@@ -226,7 +238,7 @@ Requirement: an object.
 
 ### `annotation_entity`
 Requirement: an annotation.
-`get_constant`
+`get_constant` (returns `constant`)
 
 ### `structured_binding_entity`
 Requirement: a structured binding.
@@ -286,10 +298,10 @@ hard compile error, not a failure.
 | function | result |
 |---|---|
 | `flatten(items...)` | `std::vector<handle>`: handles and (nested) ranges of handles, in order |
-| `reflect_constant(v)` | `handle` (a value for scalars, a template parameter object for class types) |
-| `reflect_object(o)` | `object` (o needs static storage duration) |
+| `reflect_constant(v)` | `typed_constant<T>` for a non-class `v` (a value), `typed_object<T>` for a class-type `v` (its template parameter object, a different object from `v` itself) |
+| `reflect_object(o)` | `typed_object<T>`: `o` itself (o needs static storage duration) |
 | `reflect_function(f)` | `handle` |
-| `reflect_constant_string(r)`, `reflect_constant_array(r)` | `handle` |
+| `reflect_constant_string(r)`, `reflect_constant_array(r)` | `object` (the array as a template parameter object) |
 | `try_get_current_function(ctx = current())` | `meta_result<handle>` |
 | `get_current_function(ctx = current())` | `handle` |
 | `try_get_current_class(ctx = current())` | `meta_result<type>` |

@@ -80,4 +80,9 @@ title = "Status"
   Full build + ctest 16/16, README examples compile, include-only compile memory 223M (was 217M).
 - Out-of-line ability definitions in handle.hpp are ordered by ability and declaration order (2026-11-26); they stay
   out of line because the kinds they return are complete only after every ability is declared.
+- Done 2026-11-26: kind constant (a value or an object; is_value_constant / is_object_constant); typed kinds
+  typed_constant<T> / typed_object<T> / typed_annotation<T> through ability::typed_as<T> (extract() without a template
+  argument); except<Set, A...> and K::without_ability<A...>; reflect_constant returns typed_constant or typed_object by
+  the argument type, reflect_object typed_object, reflect_constant_string / _array object;
+  get_annotations_with_type<T>(). See [[design.misc-queries]]. CLion evaluator bugs reported, see [[build.cmake-setup]].
 - Clang support once clang adopts P4101.

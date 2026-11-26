@@ -52,6 +52,12 @@ Non-obvious points:
   fails, sorting by display_string_of works.
 - Fix: details::type_less uses type_order only when !defined(__CLION_IDE__) (CLion defines it during analysis);
   the IDE orders by display_string_of. Real compiles are unchanged. After it: handle.hpp and most tests 0 errors.
+- Reported to JetBrains (2026-11-26, CLion 2026.3.0.2): std::meta::type_order unsupported is RSCPP-37583 (existing,
+  untriaged; our comment describes the "Cannot substitute" effect and the __CLION_IDE__ workaround). extract not
+  rejecting a wrong type is RSCPP-38174 (ours): the evaluator accepts extract<long E::*> / <double E::*> of an int
+  member, extract<long (E::*)()> of int f(), and extract<int &> of a variable; it does reject wrong value types and
+  wrong reference types on objects (RSCPP-38103, fixed). Not caused by int and long having the same size on Windows.
+  Remove the __CLION_IDE__ branch in details::type_less once RSCPP-37583 is fixed.
 - Remaining IDE-only errors are CLion's evaluator disagreeing with GCC: a u8 identifier comparison with non-ASCII
   text, and extract with a wrong type not throwing (misc_test 43, 46, 47). GCC passes these.
 - get_file_problems often times out (60-280 s) on larger tests and headers; results can be stale right after an

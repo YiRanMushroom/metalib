@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <metalib/metalib.hpp>
+#include <type_traits>
 #include <utility>
 #include <variant>
 namespace mb = metalib;
@@ -38,7 +39,28 @@ static_assert(anns.size() == 2 && anns[0].extract<int>() == 1 && anns[1].get_typ
 static_assert(anns[0].get_constant().into<mb::value>().extract<int>() == 1);
 static_assert(mb::try_reflect<mb::annotation>(anns[0].info).has_value() &&
               !mb::try_reflect<mb::annotation>(^^A).has_value());
-static_assert(mb::reflect_constant(42).into<mb::value>().extract<int>() == 42);
+static_assert(std::is_same_v<decltype(mb::reflect_constant(42)), mb::typed_constant<int>> &&
+              std::is_same_v<decltype(mb::reflect_constant(P{1, 2.0})), mb::typed_object<P>> &&
+              std::is_same_v<decltype(mb::reflect_object(gv)), mb::typed_object<int>>);
+static_assert(mb::reflect_constant(42).extract() == 42 && mb::reflect_constant(P{1, 2.0}).extract().a == 1);
+static_assert(mb::reflect_constant(42).into<mb::constant>().extract<int>() == 42 &&
+              !std::is_convertible_v<mb::constant, mb::typed_constant<int>>);
+static_assert(std::is_same_v<mb::except<mb::value::abilities, mb::ability::constant, mb::ability::typed>,
+                             mb::ability_set<mb::ability::displayable, mb::ability::value_entity>> &&
+              std::is_same_v<mb::typed_constant<int>::without_ability<mb::ability::typed_as<int>>,
+                             mb::constant::without_ability<mb::ability::constant>>);
+// typed annotations
+constexpr mb::array_literal int_anns = mb::reflect<mb::type>(^^A).get_annotations_with_type<int>();
+static_assert(int_anns.size() == 1 && int_anns[0].extract() == 1);
+static_assert(anns[1].into<mb::typed_annotation<double>>().extract() == 2.5 &&
+              !anns[1].try_into<mb::typed_annotation<int>>().has_value());
+static_assert(anns[1].try_into<mb::typed_annotation<int>>().error().u8message().ends_with(
+    u8"is not of type " + std::u8string(std::meta::u8display_string_of(^^int))));
+static_assert(mb::reflect_constant(42).is_value_constant() && !mb::reflect_constant(42).is_object_constant());
+static_assert(std::is_same_v<decltype(mb::reflect_constant_string(std::string_view("hi"))), mb::object>);
+static_assert(mb::reflect_constant_string(std::string_view("hi")).get_type() == mb::reflect<mb::type>(^^char const[3]));
+static_assert(mb::try_reflect<mb::constant>(mb::reflect_constant(42).info).has_value() &&
+              !mb::try_reflect<mb::constant>(^^int).has_value());
 static_assert(mb::reflect_object(gv).get_type() == tint);
 static_assert(mb::reflect_function(takes).try_into<mb::function>().has_value());
 static_assert(mb::reflect<mb::variable>(^^gv).get_object() == mb::reflect_object(gv));

@@ -57,3 +57,23 @@ static_member_function, function, variable. GCC trunk: extract<int S::*>(data me
 function), extract<R (*)(..)>(function) work; a wrong type throws; extract<int&>(^^variable) throws, extract<int&>(
 object_of(variable)) works; extract<int>/extract<int*> of a non-constexpr variable is a hard error (not catchable).
 meta_result<T&> works (libstdc++ has optional<T&>; meta_result forwards instead of moving).
+
+Constants and objects (2026-11-26, decided with the user; verified on GCC trunk, scratchpad vararg_probe/co.cpp):
+- reflect_constant(v) returns the kind constant for a non-class v (std: a value) and object for a class-type v (std:
+  the template parameter object). That object is not v: reflect_constant(x) != reflect_object(x), its address differs
+  from &x, and reflect_constant(x) == reflect_constant(y) when the values are equal. reflect_object(x) is x itself.
+- constant (displayable, typed, constant, constant_entity: a value or an object) is also what an annotation's
+  get_constant() returns, where the type is not known statically; is_value_constant() / is_object_constant() tell which.
+- reflect_constant_string / reflect_constant_array return object. Working draft [meta.reflection] "Promoting to static
+  storage": both return ^^P where P is a template parameter object ("a potentially non-unique object"). GCC trunk
+  reports is_variable for the result (is_object and is_value false): a GCC deviation, not followed; the kinds are
+  built unchecked, so only try_reflect<object>(that info) is affected.
+- reflect_function returns handle: a free function is a function, a static member function is a class member.
+- Typed kinds (2026-11-26, user decision: keep as much in the type as can be known): ability::typed_as<T> (requirement
+  "of type T", cv ignored; try_extract() / extract() without a template argument). typed_constant<T>, typed_object<T>,
+  typed_annotation<T> = the untyped kind's set except ability::constant, plus typed_as<T>; the generic extract<T>() is
+  removed from them so there is one way to read the value, which also means they do not convert implicitly to the
+  untyped kind (use into<constant>()). reflect_constant / reflect_object return them; annotatable has
+  get_annotations_with_type<T>(). except<Set, A...> and K::without_ability<A...> remove abilities. Typed kinds must be
+  spelled basic_interface<>::with_ability<set, ...>: K::with_ability would need K complete before the abilities are.
+  Include-only compile memory 228M (223M before).
