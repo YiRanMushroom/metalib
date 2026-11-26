@@ -14,7 +14,7 @@ snippet = "try_get_parent"
 - Every accessor on a handle is a verb phrase: get_ for something that already exists (get_parent, get_type,
   get_members, get_destructor, get_current_namespace), find_ for something computed (find_common_type_with,
   find_invoke_result_with), make_ for something constructed (make_data_member_spec). Verbs keep their name (extract,
-  substitute, remove_cvref, make_signed, define_aggregate, reflect, K::from). Predicates stay is_ / has_ / can_.
+  substitute, remove_cvref, make_signed, define_aggregate, make_reflection, K::from). Predicates stay is_ / has_ / can_.
 - An operation that can fail is a pair: `try_<verb>(...)` returns `meta_result<T>`, the plain name returns `T` and is
   `try_<verb>(...).unwrap()`. One that cannot fail has only the plain form. The prefix does not depend on fallibility,
   so making an accessor fallible later only adds its try_ form.
@@ -29,5 +29,6 @@ snippet = "try_get_parent"
 - Text names follow std: no "ascii" and no underscore after u8 (get_identifier / get_u8identifier, get_display_string /
   get_u8display_string, has_identifier / has_u8identifier, get_operator_symbol / get_u8operator_symbol, message /
   u8message). The plain form requires ASCII and fails otherwise. meta_error::from() keeps its name.
-- Kinds have no public constructor from std::meta::info; users call reflect<K>(r) / try_reflect<K>(r), the library
-  calls details::reflect_unchecked<K>(r). Tests use reflect like a user would.
+- Kinds have no public constructor from std::meta::info; users write mb::reflect<^^x> (kind deduced,
+  [[design.kind-deduction]]) or make_reflection<K>(r) / try_make_reflection<K>(r) for a reflection that is not a
+  constant; the library calls details::reflect_unchecked<K>(r). Tests do the same as a user would.

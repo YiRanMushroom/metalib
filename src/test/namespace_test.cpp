@@ -18,11 +18,11 @@ namespace N {
     namespace [[=1]] annotated {}
 }
 constexpr auto ctx = std::meta::access_context::unchecked();
-constexpr mb::namespace_ n = mb::reflect<mb::namespace_>(^^N);
+constexpr mb::namespace_ n = mb::reflect<^^N>;
 static_assert(n.get_members(ctx).size() == 13);
 static_assert(n.get_members<mb::namespace_>(ctx).size() == 3);
 static_assert(n.get_members<mb::namespace_alias>(ctx).size() == 1 &&
-              n.get_members<mb::namespace_alias>(ctx)[0].get_target() == mb::reflect<mb::namespace_>(^^N::inner));
+              n.get_members<mb::namespace_alias>(ctx)[0].get_target() == mb::reflect<^^N::inner>);
 static_assert(n.get_members<mb::variable>(ctx).size() == 3 && n.get_members<mb::function>(ctx).size() == 3);
 static_assert(n.get_members<mb::type>(ctx).size() == 3 &&
               n.get_members<mb::class_type::with_ability<ab::non_alias>>(ctx).size() == 1);
@@ -37,15 +37,15 @@ static_assert(n.get_members<mb::variable>(ctx)[1].has_internal_linkage() &&
 static_assert(n.get_members<mb::function>(ctx)[2].has_internal_linkage() &&
               n.get_members<mb::function>(ctx)[1].get_parameters().size() == 1);
 static_assert(mb::global_namespace.get_members<mb::namespace_>(ctx, mb::predicate::of_name("N")).size() == 1);
-static_assert(mb::reflect<mb::namespace_>(^^N::annotated).get_annotations().size() == 1);
+static_assert(mb::reflect<^^N::annotated>.get_annotations().size() == 1);
 // narrowing
-static_assert(!mb::try_reflect<mb::namespace_>(^^N::alias_ns).has_value() &&
-              mb::try_reflect<mb::namespace_alias>(^^N::alias_ns).has_value());
-static_assert(mb::try_reflect<mb::variable>(^^N::var).has_value() &&
-              !mb::try_reflect<mb::function>(^^N::var).has_value());
-static_assert(!mb::try_reflect<mb::namespace_member>(^^::).has_value());
+static_assert(!mb::try_make_reflection<mb::namespace_>(^^N::alias_ns).has_value() &&
+              mb::try_make_reflection<mb::namespace_alias>(^^N::alias_ns).has_value());
+static_assert(mb::try_make_reflection<mb::variable>(^^N::var).has_value() &&
+              !mb::try_make_reflection<mb::function>(^^N::var).has_value());
+static_assert(!mb::try_make_reflection<mb::namespace_member>(^^::).has_value());
 // parent chain across kinds: enumerator -> enum -> its enumerators -> parent again
-constexpr auto en = mb::reflect<mb::enum_type>(^^N::E).get_enumerators()[0];
+constexpr auto en = mb::reflect<^^N::E>.get_enumerators()[0];
 static_assert(en.get_parent().into<mb::enum_type>().get_enumerators()[0].get_parent().info == ^^N::E);
 TEST_CASE("namespace: compile-time checks") {
     SUCCEED("all checks are static_asserts");

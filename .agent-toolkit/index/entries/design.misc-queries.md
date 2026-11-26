@@ -67,7 +67,7 @@ Constants and objects (2026-11-26, decided with the user; verified on GCC trunk,
 - reflect_constant_string / reflect_constant_array return object. Working draft [meta.reflection] "Promoting to static
   storage": both return ^^P where P is a template parameter object ("a potentially non-unique object"). GCC trunk
   reports is_variable for the result (is_object and is_value false): a GCC deviation, not followed; the kinds are
-  built unchecked, so only try_reflect<object>(that info) is affected.
+  built unchecked, so only try_make_reflection<object>(that info) is affected.
 - reflect_function returns handle: a free function is a function, a static member function is a class member.
 - Typed kinds (2026-11-26, user decision: keep as much in the type as can be known): ability::typed_as<T> (requirement
   "of type T", cv ignored; try_extract() / extract() without a template argument). typed_constant<T>, typed_object<T>,

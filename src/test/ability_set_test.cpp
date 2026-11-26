@@ -15,10 +15,10 @@ static_assert(std::is_same_v<mb::nested_type, mb::member::with_ability<mb::type:
 static_assert(std::is_same_v<mb::nested_class,
                              mb::class_type::with_ability<mb::nested_type::abilities, ab::non_alias>>);
 struct S { int x; };
-static_assert(mb::reflect<mb::data_member>(^^S::x).try_get_parent().try_into<mb::class_type>().has_value());
-static_assert(!mb::reflect<mb::data_member>(^^S::x).try_get_parent().try_into<mb::union_type>().has_value());
-static_assert(!mb::reflect<mb::type>(^^int).try_get_parent().has_value());
-static_assert(mb::reflect<mb::type>(^^int).try_get_parent().error().u8message() ==
+static_assert(mb::reflect<^^S::x>.try_get_parent().try_into<mb::class_type>().has_value());
+static_assert(!mb::reflect<^^S::x>.try_get_parent().try_into<mb::union_type>().has_value());
+static_assert(!mb::reflect<^^int>.try_get_parent().has_value());
+static_assert(mb::reflect<^^int>.try_get_parent().error().u8message() ==
               u8"reflection '" + std::u8string(std::meta::u8display_string_of(^^int)) + u8"' has no parent");
 static_assert(std::is_same_v<mb::ability_set<>, std::tuple<>>);
 static_assert(std::is_same_v<mb::ability_set<ab::overridable, ab::virtual_specifier>, ab::overridable>);

@@ -16,7 +16,7 @@ private:
 enum class color { red, green };
 namespace N { int v; void g(); }
 template<typename T, int K = 2> struct box { T value[K]; };
-constexpr auto cs = mb::reflect<mb::class_type>(^^S);
+constexpr auto cs = mb::reflect<^^S>;
 // members: same elements as the direct query, public only by default, everything with access::unchecked
 static_assert(mb::cache::members<cs, mb::data_member>.size() == 2);
 static_assert(mb::cache::members<cs, mb::data_member, access::unchecked>.size() == 3);
@@ -25,15 +25,15 @@ static_assert(mb::cache::members<cs, mb::data_member>[1] ==
 static_assert(std::is_same_v<std::remove_cvref_t<decltype(mb::cache::members<cs, mb::data_member>)>,
                              mb::array_literal<mb::data_member>>);
 static_assert(mb::cache::members<cs>.size() == cs.get_members(std::meta::access_context::unprivileged()).size());
-static_assert(mb::cache::members<mb::reflect<mb::namespace_>(^^N), mb::variable>.size() == 1);
+static_assert(mb::cache::members<mb::reflect<^^N>, mb::variable>.size() == 1);
 // the cached array is one object: every use refers to the same storage
 static_assert(&mb::cache::members<cs, mb::data_member> == &mb::cache::members<cs, mb::data_member>);
 static_assert(mb::cache::members<cs, mb::data_member>.data() == mb::cache::members<cs, mb::data_member>.data());
 // other cached queries
 static_assert(mb::cache::bases<cs>.size() == 1 && mb::cache::subobjects<cs, access::unchecked>.size() == 4);
-static_assert(mb::cache::enumerators<mb::reflect<mb::enum_type>(^^color)>[1].get_identifier() == "green");
-static_assert(mb::cache::parameters<mb::reflect<mb::member_function>(^^S::f)>.size() == 2);
-static_assert(mb::cache::template_arguments<mb::reflect<mb::class_type>(^^box<int>)>.size() == 2);
+static_assert(mb::cache::enumerators<mb::reflect<^^color>>[1].get_identifier() == "green");
+static_assert(mb::cache::parameters<mb::reflect<^^S::f>>.size() == 2);
+static_assert(mb::cache::template_arguments<mb::reflect<^^box<int>>>.size() == 2);
 // cached results work in expansion statements
 consteval std::string_view names() {
     std::string joined;

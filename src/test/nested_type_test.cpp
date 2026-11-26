@@ -15,7 +15,7 @@ private:
     struct hidden {};
 };
 constexpr auto ctx = std::meta::access_context::unchecked();
-constexpr mb::class_type cs = mb::reflect<mb::type>(^^S).into<mb::class_type>();
+constexpr mb::class_type cs = mb::reflect<^^S>.into<mb::class_type>();
 consteval bool names(auto const &list, std::initializer_list<std::string_view> expected) {
     if (list.size() != expected.size()) return false;
     std::size_t i = 0;
@@ -38,15 +38,15 @@ constexpr mb::array_literal classes = cs.get_members<mb::nested_class>(ctx);
 static_assert(classes[0].get_parent().info == cs.info && classes[1].is_private() &&
               classes[0].get_members<mb::data_member>(ctx).size() == 1);
 static_assert(cs.get_members<mb::nested_enum>(ctx)[0].get_enumerators().size() == 1);
-static_assert(cs.get_members<mb::nested_alias>(ctx)[1] == mb::reflect<mb::type>(^^S::defined));
+static_assert(cs.get_members<mb::nested_alias>(ctx)[1] == mb::reflect<^^S::defined>);
 // checked narrowing
-static_assert(mb::try_reflect<mb::nested_class>(^^S::defined).has_value());
-static_assert(!mb::try_reflect<mb::nested_class>(^^S::alias).has_value());
+static_assert(mb::try_make_reflection<mb::nested_class>(^^S::defined).has_value());
+static_assert(!mb::try_make_reflection<mb::nested_class>(^^S::alias).has_value());
 static_assert(mb::nested_class::try_from(mb::handle{^^S::alias}).error().u8message().ends_with(
                   u8"' is not the type's own declaration"));
-static_assert(!mb::try_reflect<mb::nested_class>(^^S::declared_only).has_value() &&
-              mb::try_reflect<mb::nested_type>(^^S::declared_only).has_value());
-static_assert(!mb::try_reflect<mb::nested_union>(^^S::defined).has_value());
+static_assert(!mb::try_make_reflection<mb::nested_class>(^^S::declared_only).has_value() &&
+              mb::try_make_reflection<mb::nested_type>(^^S::declared_only).has_value());
+static_assert(!mb::try_make_reflection<mb::nested_union>(^^S::defined).has_value());
 TEST_CASE("nested type: compile-time checks") {
     SUCCEED("all checks are static_asserts");
 }

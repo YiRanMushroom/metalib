@@ -2,19 +2,20 @@
 title = "Status"
 +++
 
-## Where it stands (2026-11-25)
+## Where it stands (2026-11-26)
 - Library complete for the basic reflection API: every std::meta query is wrapped (the only ones not wrapped are
   access_context members scope/via/designating_class, std::meta::exception members, std::is_string_literal).
-  Code: src/lib/include/metalib/ (handle.hpp, meta_result.hpp, literal.hpp, query.hpp, encoding.hpp, metalib.hpp).
+  Code: src/lib/include/metalib/ (handle.hpp, reflect.hpp, meta_result.hpp, literal.hpp, query.hpp, encoding.hpp,
+  metalib.hpp).
   enum.hpp (old sample) was removed.
 - Design: [[design.flat-abilities]] (kinds = ability sets, layout of handle.hpp, untyped parent, naming),
   [[design.class-types]], [[design.namespaces]], [[design.misc-queries]], [[design.templates]],
-  [[design.annotations]]; older background: [[design.handle-abilities]], [[reflection.universal-queries]],
+  [[design.annotations]], [[design.kind-deduction]]; older background: [[design.handle-abilities]], [[reflection.universal-queries]],
   [[reflection.handle-prototype]], [[reflection.expansion-statements]]. Build: [[build.cmake-setup]].
 - User docs: README.md and docs/reference.md (written against handle.hpp; edit them when kinds/abilities change).
 
 ## Verified
-- GCC trunk (C:/mingw64-gcc-trunk, gcc-17-20261122) on Windows: CMake build + ctest 16/16 (src/test, one executable
+- GCC trunk (C:/mingw64-gcc-trunk, gcc-17-20261122) on Windows: CMake build + ctest 17/17 (src/test, one executable
   per file, mostly static_asserts; identifier_test also built with METALIB_HAS_META_EXCEPTION=0), 2026-11-26.
 - Not verified: any clang (clang-p2996 still uses the old consteval-only type model and is expected to reject parts),
   GCC 16.x (rejects meta_result with info), compile-time cost on large code.
@@ -57,7 +58,8 @@ title = "Status"
   meta_result: std::expected-style U&& constructor (forwarding, excludes meta_result / meta_error), unwrap() and
   unwrap_or(T) take an explicit object parameter so rvalue results move out; meta_result<T&> keeps working. Rejected: wrapping
   std::meta::exception (its message carries no reason; GCC substitutes with tf_none).
-- Narrowing shortcuts (2026-11-26, user request): try_reflect<K>(info) -> meta_result<K>, reflect<K>(info) -> K;
+- Narrowing shortcuts (2026-11-26, user request): try_make_reflection<K>(info) -> meta_result<K>, make_reflection<K>(info) -> K
+  (named try_reflect / reflect until the same evening);
   h.into<K>() = try_into + unwrap; meta_result<handle kind> has try_into<K>() (keeps the original error) and into<K>().
 - Done 2026-11-26 : kind constructor private + friend details::reflect_unchecked, public K{r} checked
   (bench_params constant evaluation 119M -> 135M from the per-construction check; include-only unchanged); review of
@@ -69,14 +71,14 @@ title = "Status"
   constraints; METALIB_HAS_META_EXCEPTION lives in handle.hpp; ascii_to_u8 removed; string_literal comparisons are
   unambiguous; tests no longer depend on GCC spellings or member order; docs updated.
 - Done 2026-11-26 : functions that can fail come as try_<verb> (meta_result) / plain (value) pairs;
-  nouns became get_ / find_ / make_ verb phrases; K::try_from / K::from, try_reflect / reflect; cache::template_arguments
+  nouns became get_ / find_ / make_ verb phrases; K::try_from / K::from, try_make_reflection / make_reflection; cache::template_arguments
   holds the array ([[conventions.naming]]). Tests, README and reference updated by three parallel agents (10-14 min
   each). Full build + ctest 16/16, README examples compile, include-only compile memory unchanged (217M).
 - Done 2026-11-26 , second naming round decided by the user ([[conventions.naming]]): every accessor is
   a verb phrase (get_ existing / find_ computed / make_ constructed), independent of fallibility; get_destructor;
   new fallible pairs try_get_/get_ for type, size, alignment, return_type, enumerators, base offset; the plain form of
   a pair attaches its ability (details::attach_ability_unchecked) and unwraps the try_ form; public
-  try_attach_ability / attach_ability on kinds; std-style text names (get_identifier / get_u8identifier, no "ascii"); kinds have no public constructor from info (reflect<K>(r) only; tests use it).
+  try_attach_ability / attach_ability on kinds; std-style text names (get_identifier / get_u8identifier, no "ascii"); kinds have no public constructor from info.
   Full build + ctest 16/16, README examples compile, include-only compile memory 223M (was 217M).
 - Out-of-line ability definitions in handle.hpp are ordered by ability and declaration order (2026-11-26); they stay
   out of line because the kinds they return are complete only after every ability is declared.
@@ -85,4 +87,10 @@ title = "Status"
   argument); except<Set, A...> and K::without_ability<A...>; reflect_constant returns typed_constant or typed_object by
   the argument type, reflect_object typed_object, reflect_constant_string / _array object;
   get_annotations_with_type<T>(). See [[design.misc-queries]]. CLion evaluator bugs reported, see [[build.cmake-setup]].
+- Done 2026-11-26 (uncommitted): mb::reflect<^^x> deduces the kind (reflect.hpp, [[design.kind-deduction]]); the
+  former reflect<K>(r) / try_reflect<K>(r) are make_reflection<K>(r) / try_make_reflection<K>(r); every ability has a
+  check and the [[=auto_ability]] mark; member and namespace_member lost annotatable; tests use reflect<^^x> at literal
+  sites; new reflect_test.cpp.
+- Waiting for the user: whether to arrange abilities in nested namespaces with a check per namespace (measured gain is
+  small, see [[design.kind-deduction]]); commit and push of the work above.
 - Clang support once clang adopts P4101.

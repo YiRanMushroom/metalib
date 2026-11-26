@@ -1,10 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <metalib/handle.hpp>
+#include <metalib/reflect.hpp>
 #include <type_traits>
 namespace mb = metalib;
 namespace ab = metalib::ability;
 struct S {};
-constexpr auto t = mb::reflect<mb::type>(^^S);
+constexpr auto t = mb::reflect<^^S>;
 static_assert(std::is_same_v<mb::basic_interface<>::with_ability<ab::identifiable, ab::displayable>,
                              mb::basic_interface<>::with_ability<ab::displayable, ab::identifiable>>);
 static_assert(std::is_same_v<mb::basic_interface<>::with_ability<ab::identifiable, ab::identifiable>,

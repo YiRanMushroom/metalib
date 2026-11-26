@@ -10,11 +10,11 @@ namespace mb = metalib;
 
 struct point { int x; int y; double weight; };
 
-constexpr mb::class_type cls = mb::reflect<mb::class_type>(^^point);
+constexpr mb::class_type cls = mb::reflect<^^point>;
 constexpr mb::array_literal ints = cls.get_members<mb::data_member>(std::meta::access_context::current(),
                                                                 mb::predicate::of_type<int>());
 static_assert(ints.size() == 2 && ints[1].get_identifier() == "y");
-static_assert(ints[0].get_type() == mb::reflect<mb::type>(^^int) && ints[0].get_offset().bytes == 0);
+static_assert(ints[0].get_type() == mb::reflect<^^int> && ints[0].get_offset().bytes == 0);
 ```
 
 Header-only, one include: `<metalib/metalib.hpp>`. The complete list of kinds, abilities and functions is in
@@ -57,29 +57,54 @@ using class_type = basic_interface<>::with_ability<details::ability_sets::class_
 - Ability functions take `this handle const &self`, so `&mb::member_function::is_const` is an ordinary function
   pointer usable as a predicate.
 
+### Reflecting: `mb::reflect<^^x>`
+
+`mb::reflect<R>` (a variable template, in `<metalib/reflect.hpp>`) takes the reflection as a template argument and
+gives a handle with **every ability that holds for it**, so the kind does not have to be named:
+
+```cpp
+static_assert(mb::reflect<^^point::x>.get_offset().bytes == 0);   // has the abilities of a data member
+constexpr mb::class_type cls = mb::reflect<^^point>;              // converts to any kind it satisfies
+// constexpr mb::variable v = mb::reflect<^^point::x>;            // a type error: not a variable
+```
+
+- The result converts implicitly to the named kinds the reflection satisfies; its exact type is an implementation
+  detail (it changes when abilities are added), so name a kind where a type is needed.
+- It works wherever the reflection is a constant: a `^^` expression, a `constexpr std::meta::info`, the element of
+  a `template for`. A reflection held in a function parameter or an ordinary variable is not a constant: use
+  `mb::make_reflection<K>(r)` there.
+- A value, an object or an annotation gives the typed kind (`typed_constant<T>`, `typed_object<T>`,
+  `typed_annotation<T>`), whose `extract()` needs no template argument. Like every typed kind it does not convert
+  to the untyped `constant`, `value`, `object` or `annotation`.
+- Which abilities are tried: every class in `metalib::ability` marked `[[=auto_ability]]`, each asked through its
+  `static consteval bool check(std::meta::info)`. An ability of your own takes part when it is declared in that
+  namespace with the mark, before `mb::reflect` is first used in the translation unit (and the same in every
+  translation unit).
+
 ### Narrowing
 
-- Checked: `mb::try_reflect<K>(r)` (from a `std::meta::info`), `h.try_into<K>()` and `K::try_from(h)` return
+- Checked: `mb::try_make_reflection<K>(r)` (from a `std::meta::info`), `h.try_into<K>()` and `K::try_from(h)` return
   `meta_result<K>`; `K::holds(info)` tests. The failure message names the reflection and the first unmet requirement,
-  e.g. `reflection 'int' is not a class type`.
-- `mb::reflect<K>(r)`, `h.into<K>()` and `K::from(h)` return `K`; each is its `try_` form followed by `.unwrap()`
-  (`h.into<K>()` is `h.try_into<K>().unwrap()`), so a failure is a compile error showing the message.
+  e.g. `reflection 'int' is not a class type`, or `reflection '...' cannot have annotations` when only a capability
+  is missing.
+- `mb::make_reflection<K>(r)`, `h.into<K>()` and `K::from(h)` return `K`; each is its `try_` form followed by
+  `.unwrap()` (`h.into<K>()` is `h.try_into<K>().unwrap()`), so a failure is a compile error showing the message.
 - A `meta_result` holding a handle has `try_into<K>()` (keeps the original error) and `into<K>()` too:
-  `t.try_substitute({mb::reflect<mb::type>(^^int)}).try_into<mb::class_type>()`, `d.try_get_parent().into<mb::namespace_>()`. The
-  plain forms return a `handle`, narrowed the same way: `t.substitute({mb::reflect<mb::type>(^^int)}).into<mb::class_type>()`,
+  `t.try_substitute({mb::reflect<^^int>}).try_into<mb::class_type>()`, `d.try_get_parent().into<mb::namespace_>()`. The
+  plain forms return a `handle`, narrowed the same way: `t.substitute({mb::reflect<^^int>}).into<mb::class_type>()`,
   `d.get_parent().into<mb::namespace_>()`.
 - `k.try_attach_ability<A...>()` returns `meta_result<K::with_ability<A...>>` and `k.attach_ability<A...>()` the kind
   itself: the same handle with more abilities, checked against their requirements.
-- A kind has no public constructor from a reflection: `reflect<K>(r)` is the way in. Unchecked construction is
-  internal to metalib (`details::reflect_unchecked`, the friend of a private constructor). `K{}` holds
-  a null reflection.
+- A kind has no public constructor from a reflection: `reflect<R>` and `make_reflection<K>(r)` are the ways in.
+  Unchecked construction is internal to metalib (`details::reflect_unchecked`, the friend of a private constructor).
+  `K{}` holds a null reflection.
 
 ### Equality
 
 `==` compares handles of any two kinds. If either kind has the type ability, the comparison is dealiased
-(`reflect<type>(^^alias) == reflect<type>(^^target)`); otherwise it compares the reflections. Comparing with a raw `std::meta::info` is
-deleted. The untyped `handle` has no `==`: narrow it first (`d.get_parent().into<mb::class_type>() == cs`) or compare
-`.info`.
+(`mb::reflect<^^alias> == mb::reflect<^^target>`); otherwise it compares the reflections. Comparing with a raw
+`std::meta::info` is deleted. The untyped `handle` has no `==`: narrow it first
+(`d.get_parent().into<mb::class_type>() == cs`) or compare `.info`.
 
 ### Failures: `meta_result<T>` and `meta_error`
 
@@ -133,7 +158,7 @@ constexpr mb::array_literal fields = cls.get_members<mb::data_member>();   // co
 
 template<class E>
 constexpr std::string_view name_of(E v) {
-    template for (constexpr mb::enumerator e : mb::array_literal(mb::reflect<mb::enum_type>(^^E).get_enumerators())) {
+    template for (constexpr mb::enumerator e : mb::array_literal(mb::reflect<^^E>.get_enumerators())) {
         if (v == e.extract<E>()) return e.get_identifier();
     }
     return {};
@@ -160,7 +185,7 @@ ns.get_members<mb::variable>();        // namespaces work the same way
 `metalib::cache::members<Scope, Kind = void, access = access::unprivileged>` is a variable template holding the result
 of `Scope.get_members<Kind>(ctx)`; it is computed once per translation unit and every use refers to the same array,
 which also saves compile time when the same query is repeated. `Scope` is a kind value (handles are structural), e.g.
-`mb::cache::members<mb::reflect<mb::class_type>(^^S), mb::data_member>`. A variable template cannot see the caller's scope, so the
+`mb::cache::members<mb::reflect<^^S>, mb::data_member>`. A variable template cannot see the caller's scope, so the
 access is `access::unprivileged` (public members) or `access::unchecked` (everything). Also `cache::bases`,
 `cache::subobjects`, `cache::enumerators`, `cache::parameters`, `cache::template_arguments`. Annotations are not cached
 because their result depends on where they are queried.
@@ -172,7 +197,7 @@ chars; it can be used directly as a C++26 `static_assert` message. `to_string(h)
 handle's display string.
 
 ```cpp
-static_assert(m.get_type() == mb::reflect<mb::type>(^^int), mb::message("member ", m, " must have type int, has ", m.get_type()));
+static_assert(m.get_type() == mb::reflect<^^int>, mb::message("member ", m, " must have type int, has ", m.get_type()));
 // error: static assertion failed: member S::x must have type int, has double
 ```
 

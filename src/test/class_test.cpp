@@ -36,7 +36,7 @@ private:
 };
 using SA = S;
 constexpr access_context unchecked = access_context::unchecked();
-constexpr mb::class_type cs = mb::reflect<mb::type>(^^S).into<mb::class_type>();
+constexpr mb::class_type cs = mb::reflect<^^S>.into<mb::class_type>();
 
 consteval bool same(auto const &handles, std::vector<info> const &expected) {
     if (handles.size() != expected.size()) return false;
@@ -68,8 +68,8 @@ static_assert(from_friend() == 4);
 static_assert(cs.has_inaccessible_nonstatic_data_members() && !cs.has_inaccessible_nonstatic_data_members(unchecked));
 
 // aliases name the same class
-static_assert(mb::reflect<mb::type>(^^SA).into<mb::class_type>().get_members<mb::data_member>(unchecked).size() == 4);
-static_assert(!mb::reflect<mb::type>(^^int).try_into<mb::class_type>().has_value());
+static_assert(mb::reflect<^^SA>.into<mb::class_type>().get_members<mb::data_member>(unchecked).size() == 4);
+static_assert(!mb::reflect<^^int>.try_into<mb::class_type>().has_value());
 
 // predicates and transforms
 using namespace mb::predicate;
@@ -78,7 +78,7 @@ static_assert(cs.get_members<mb::member_function>(unchecked, of_name("f") || of_
 static_assert(cs.get_members<mb::member_function>(unchecked,
                   of_name("f").or_(of_operator(op_plus)).and_(
                       mb::predicate::from([](mb::member_function f) { return !f.is_const(); }))).size() == 1);
-static_assert(cs.get_members<mb::data_member>(unchecked, of_type(mb::reflect<mb::type>(^^int))).size() == 2);
+static_assert(cs.get_members<mb::data_member>(unchecked, of_type(mb::reflect<^^int>)).size() == 2);
 static_assert(cs.get_members<mb::data_member>(unchecked, of_type<int>() || of_type<double>()).size() == 3);
 static_assert(cs.get_members<mb::member_function>(unchecked,
                   mb::predicate::from(&mb::member_function::has_explicit_object_parameter)).size() == 1);
@@ -88,9 +88,9 @@ static_assert(cs.get_members<mb::member_function>(unchecked,
 static_assert(cs.get_members<mb::data_member>(unchecked, of_type<int>(),
                   mb::transform::from(&mb::data_member::get_bit_size).and_then([](std::size_t n) { return n + 1; }))
                   .size() == 2);
-static_assert(cs.get_members<mb::data_member>(unchecked, !of_type(mb::reflect<mb::type>(^^int))).size() == 2);
+static_assert(cs.get_members<mb::data_member>(unchecked, !of_type(mb::reflect<^^int>)).size() == 2);
 constexpr mb::array_literal int_names =
-    cs.get_members<mb::data_member>(unchecked, of_type(mb::reflect<mb::type>(^^int)),
+    cs.get_members<mb::data_member>(unchecked, of_type(mb::reflect<^^int>),
     mb::transform::from([](auto const &x) { return x.get_identifier(); }));
 static_assert(int_names[0] == "a" && int_names[1] == "p");
 constexpr mb::array_literal type_names = cs.get_members<mb::data_member>(unchecked, {},
@@ -102,19 +102,19 @@ static_assert(cs.get_members<mb::static_member_function>(unchecked, of_operator(
 // nested types
 constexpr mb::array_literal nts = cs.get_members<mb::nested_type>(unchecked);
 static_assert(nts.size() == 3 && nts[0].get_identifier() == "nested" && nts[2].is_alias() && !nts[0].is_alias());
-static_assert(nts[2] == mb::reflect<mb::type>(^^int) && nts[2].get_parent().info == cs.info &&
+static_assert(nts[2] == mb::reflect<^^int> && nts[2].get_parent().info == cs.info &&
               nts[1].try_into<mb::enum_type>().has_value());
 static_assert(cs.get_members<mb::nested_type>(unchecked, [](mb::nested_type t) { return !t.is_alias(); }).size() == 2);
 
 // unions and anonymous unions
 union U { int i; float f; U() {} ~U() {} };
-static_assert(!mb::reflect<mb::type>(^^U).try_into<mb::class_type>().has_value() &&
-              !mb::reflect<mb::type>(^^S).try_into<mb::union_type>().has_value());
-constexpr mb::union_type uu = mb::reflect<mb::type>(^^U).into<mb::union_type>();
+static_assert(!mb::reflect<^^U>.try_into<mb::class_type>().has_value() &&
+              !mb::reflect<^^S>.try_into<mb::union_type>().has_value());
+constexpr mb::union_type uu = mb::reflect<^^U>.into<mb::union_type>();
 static_assert(uu.get_members<mb::data_member>(unchecked).size() == 2 && uu.try_get_destructor(unchecked).has_value());
 static_assert(uu.get_members<mb::data_member>(unchecked)[1].get_offset().bytes == 0);
 struct A { union { int x; float y; }; int after; };
-constexpr mb::class_type ca = mb::reflect<mb::type>(^^A).into<mb::class_type>();
+constexpr mb::class_type ca = mb::reflect<^^A>.into<mb::class_type>();
 constexpr auto anon = ca.get_members<mb::data_member>(unchecked)[0];
 static_assert(!anon.has_u8identifier() && ca.get_members<mb::data_member>(unchecked).size() == 2);
 static_assert(anon.get_type().into<mb::union_type>().get_members<mb::data_member>(unchecked, {},
@@ -134,14 +134,14 @@ static_assert(names.size() == 4 && names[0] == "a" && names[1] == "bits" && name
 // destructor and bases
 static_assert(cs.get_destructor(unchecked).is_override() && cs.get_destructor(unchecked).is_virtual());
 constexpr mb::array_literal bs = cs.get_bases(unchecked);
-static_assert(bs[0].get_type() == mb::reflect<mb::type>(^^B1) && !bs[0].is_virtual() && bs[0].is_public());
-static_assert(bs[1].get_type() == mb::reflect<mb::type>(^^B2) && bs[1].is_virtual() && bs[1].is_private());
+static_assert(bs[0].get_type() == mb::reflect<^^B1> && !bs[0].is_virtual() && bs[0].is_public());
+static_assert(bs[1].get_type() == mb::reflect<^^B2> && bs[1].is_virtual() && bs[1].is_private());
 static_assert(bs[0].get_parent().info == ^^S);
 
 // data members
 constexpr mb::array_literal dms = cs.get_members<mb::data_member>(unchecked);
 static_assert(dms[1].get_bit_size() == 5 && dms[2].is_mutable() && dms[2].has_default_member_initializer());
-static_assert(dms[0].get_parent().info == cs.info && dms[0].get_type() == mb::reflect<mb::type>(^^int) &&
+static_assert(dms[0].get_parent().info == cs.info && dms[0].get_type() == mb::reflect<^^int> &&
               dms[3].is_private());
 
 // member functions
@@ -151,11 +151,11 @@ consteval mb::member_function fn(std::string_view name) {
 static_assert(fn("h").has_explicit_object_parameter() && !fn("f").has_explicit_object_parameter());
 static_assert(fn("f").is_lvalue_reference_qualified() && fn("v").is_virtual() && fn("v").is_const());
 constexpr auto plus = cs.get_members<mb::member_function>(unchecked, mb::predicate::of_operator(op_plus))[0];
-static_assert(plus.get_operator_kind() == op_plus && plus.get_return_type() == mb::reflect<mb::type>(^^int));
+static_assert(plus.get_operator_kind() == op_plus && plus.get_return_type() == mb::reflect<^^int>);
 static_assert(!fn("f").try_get_operator_kind().has_value());
 constexpr mb::array_literal conv =
     cs.get_members<mb::member_function>(unchecked, [](mb::member_function f) { return f.is_conversion(); });
-static_assert(conv.size() == 1 && conv[0].is_explicit() && conv[0].get_return_type() == mb::reflect<mb::type>(^^bool));
+static_assert(conv.size() == 1 && conv[0].is_explicit() && conv[0].get_return_type() == mb::reflect<^^bool>);
 static_assert(cs.get_members<mb::static_member_function>(unchecked,
                   [](auto f) { return f.is_operator(); }).size() == 1);
 
@@ -164,15 +164,16 @@ constexpr auto two =
     cs.get_members<mb::constructor>(unchecked, [](mb::constructor c) { return c.get_parameters().size() == 2; })[0];
 static_assert(two.is_explicit() && two.get_parameters()[0].get_identifier() == "x");
 static_assert(!two.get_parameters()[0].has_default_argument() && two.get_parameters()[1].has_default_argument());
-static_assert(two.get_parameters()[1].get_type() == mb::reflect<mb::type>(^^int));
+static_assert(two.get_parameters()[1].get_type() == mb::reflect<^^int>);
 
-// checked narrowing with try_reflect
-static_assert(mb::try_reflect<mb::data_member>(^^S::a).has_value() && !mb::try_reflect<mb::static_data_member>(^^S::a));
-static_assert(mb::try_reflect<mb::static_data_member>(^^S::sd).has_value());
-static_assert(mb::try_reflect<mb::static_member_function>(^^S::g).has_value() &&
-              !mb::try_reflect<mb::member_function>(^^S::g));
-static_assert(mb::try_reflect<mb::member_function>(^^S::f).has_value() &&
-              mb::try_reflect<mb::member>(^^S::f).has_value());
+// checked narrowing with try_make_reflection
+static_assert(mb::try_make_reflection<mb::data_member>(^^S::a).has_value() &&
+              !mb::try_make_reflection<mb::static_data_member>(^^S::a));
+static_assert(mb::try_make_reflection<mb::static_data_member>(^^S::sd).has_value());
+static_assert(mb::try_make_reflection<mb::static_member_function>(^^S::g).has_value() &&
+              !mb::try_make_reflection<mb::member_function>(^^S::g));
+static_assert(mb::try_make_reflection<mb::member_function>(^^S::f).has_value() &&
+              mb::try_make_reflection<mb::member>(^^S::f).has_value());
 
 // literals
 constexpr mb::string_literal sl = "abc";

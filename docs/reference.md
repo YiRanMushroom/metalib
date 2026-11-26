@@ -15,11 +15,11 @@ is another kind's ability set, flattened in).
 | `union_type` | **type**, `record`, `union_record` |
 | `parameter` | `parented`, `identifiable`, `displayable`, `annotatable`, `typed`, `parameter_entity` |
 | `enumerator` | `identifiable`, `displayable`, `annotatable`, `typed`, `constant`, `enumerator_entity`, `parented` |
-| `member` | `parented`, `identifiable`, `displayable`, `annotatable`, `accessible`, `class_member` |
-| `data_member` | **member**, `typed`, `sized`, `nonstatic_data`, `constant` |
-| `static_data_member` | **member**, `templated`, `typed`, `sized`, `linkage`, `storage_duration`, `static_data`, `constant` |
-| `member_function` | **member**, `templated`, `typed`, `callable`, `signature`, `overridable`, `explicit_specifier`, `nonstatic_function`, `constant` |
-| `static_member_function` | **member**, `templated`, `typed`, `callable`, `signature`, `static_function`, `constant` |
+| `member` | `parented`, `identifiable`, `displayable`, `accessible`, `class_member` |
+| `data_member` | **member**, `annotatable`, `typed`, `sized`, `nonstatic_data`, `constant` |
+| `static_data_member` | **member**, `annotatable`, `templated`, `typed`, `sized`, `linkage`, `storage_duration`, `static_data`, `constant` |
+| `member_function` | **member**, `annotatable`, `templated`, `typed`, `callable`, `signature`, `overridable`, `explicit_specifier`, `nonstatic_function`, `constant` |
+| `static_member_function` | **member**, `annotatable`, `templated`, `typed`, `callable`, `signature`, `static_function`, `constant` |
 | `constructor` | `parented`, `displayable`, `annotatable`, `accessible`, `callable`, `explicit_specifier`, `constructor_entity` |
 | `destructor` | `parented`, `displayable`, `annotatable`, `accessible`, `callable`, `overridable`, `destructor_entity` |
 | `base` | `displayable`, `annotatable`, `typed`, `accessible`, `virtual_specifier`, `base_entity`, `parented` |
@@ -30,9 +30,9 @@ is another kind's ability set, flattened in).
 | `nested_alias` | **nested_type**, `type_alias` |
 | `namespace_` | `parented`, `identifiable`, `displayable`, `annotatable`, `namespace_entity` |
 | `namespace_alias` | `parented`, `identifiable`, `displayable`, `namespace_alias_entity` |
-| `namespace_member` | `parented`, `identifiable`, `displayable`, `annotatable`, `namespace_member_entity` |
-| `variable` | **namespace_member**, `templated`, `typed`, `sized`, `linkage`, `storage_duration`, `variable_entity`, `constant` |
-| `function` | **namespace_member**, `templated`, `typed`, `callable`, `signature`, `linkage`, `function_entity`, `constant` |
+| `namespace_member` | `parented`, `identifiable`, `displayable`, `namespace_member_entity` |
+| `variable` | **namespace_member**, `annotatable`, `templated`, `typed`, `sized`, `linkage`, `storage_duration`, `variable_entity`, `constant` |
+| `function` | **namespace_member**, `annotatable`, `templated`, `typed`, `callable`, `signature`, `linkage`, `function_entity`, `constant` |
 | `constant` | `displayable`, `typed`, `constant`, `constant_entity` |
 | `typed_constant<T>`, `typed_object<T>`, `typed_annotation<T>` | **constant** / **object** / **annotation** without `constant`, plus `typed_as<T>` |
 | `value` | `displayable`, `typed`, `constant`, `value_entity` |
@@ -40,8 +40,11 @@ is another kind's ability set, flattened in).
 | `annotation` | `displayable`, `typed`, `constant`, `annotation_entity` |
 | `template_` | `parented`, `identifiable`, `displayable`, `linkage`, `template_entity` |
 | `member_template` | **template_**, `accessible`, `class_member` |
-| `data_member_description` | `identifiable`, `typed`, `data_member_description_entity` |
+| `data_member_description` | `identifiable`, `displayable`, `typed`, `data_member_description_entity` |
 | `structured_binding` | `parented`, `identifiable`, `displayable`, `structured_binding_entity` |
+
+`member` and `namespace_member` hold any member, templates included, so they have no `annotatable` (a template has no
+annotations to query); the kinds built on them add it.
 
 ## Narrowing
 
@@ -53,8 +56,9 @@ something computed, `make_` for something constructed. An operation that cannot 
 
 | Call | Result |
 |---|---|
-| `try_reflect<K>(r)` | `meta_result<K>`: `handle{r}.try_into<K>()` |
-| `reflect<K>(r)` | `K`: `try_reflect<K>(r).unwrap()` |
+| `reflect<R>` | variable template (`<metalib/reflect.hpp>`): the reflection `R` with every ability that holds for it, see [Deduced kinds](#deduced-kinds-reflectr) |
+| `try_make_reflection<K>(r)` | `meta_result<K>`: `handle{r}.try_into<K>()` |
+| `make_reflection<K>(r)` | `K`: `try_make_reflection<K>(r).unwrap()` |
 | `h.try_into<K>()`, `K::try_from(h)` | `meta_result<K>`, failing with the first unmet requirement |
 | `h.into<K>()`, `K::from(h)` | `K`: `h.try_into<K>().unwrap()` |
 | `result.try_into<K>()`, `result.into<K>()` | the same on a `meta_result` holding a handle; a failed `result` keeps its error |
@@ -66,9 +70,66 @@ something computed, `make_` for something constructed. An operation that cannot 
 
 ## Abilities
 
-An ability with a requirement takes part in `holds`, `try_from` / `from`, `try_into` / `into` and
-`try_reflect` / `reflect`; the failure message is "reflection '<display string>' is not <requirement>". Functions are
-members of every kind that has the ability; a function that can fail is listed as a pair, `try_` form first.
+Every ability has `static consteval bool check(std::meta::info)`, which says whether the ability applies to a
+reflection. It takes part in `holds`, `try_from` / `from`, `try_into` / `into`, `try_make_reflection` /
+`make_reflection` and in `reflect<R>`. An ability names what it needs in one of two members, used in the failure
+message: `requirement` ("reflection '<display string>' is not <requirement>", e.g. "is not a variable") or
+`capability` ("reflection '<display string>' cannot <capability>", e.g. "cannot have annotations"). An unmet
+requirement is reported before an unmet capability; an ability with a `check` and neither text is reported as
+"reflection '<display string>' does not have the ability '<ability>'". Functions are members of every kind that has
+the ability; a function that can fail is listed as a pair, `try_` form first.
+
+Abilities that describe what a reflection can do, and where they apply:
+
+| ability | applies to | message |
+|---|---|---|
+| `identifiable` | everything except constants, annotations, base class relationships and the null reflection | cannot have an identifier |
+| `displayable` | everything | |
+| `sized` | types, objects, values, variables, non-static data members, base class relationships, data member descriptions | cannot have a size |
+| `type_traits` | types | cannot have type traits |
+| `type_transforms` | types | cannot be transformed as a type |
+| `templated` | types, variables, functions | cannot be a template specialization |
+| `annotatable` | types, variables, functions, parameters, namespaces, enumerators, base class relationships, non-static data members | cannot have annotations |
+| `constant` | constants, annotations, variables, enumerators, non-static data members, functions other than constructors and destructors | cannot be extracted |
+| `typed` | what `constant` applies to, plus base class relationships, parameters and data member descriptions | cannot have a type |
+| `parented` | everything except constants, annotations, data member descriptions and the null reflection | cannot have a parent |
+| `accessible` | class members and base class relationships | cannot have an access specifier |
+| `callable` | functions | cannot be called |
+| `signature` | functions other than constructors and destructors | cannot have a return type |
+| `virtual_specifier` | base class relationships, non-static member functions other than constructors | cannot be virtual |
+| `override_specifier` | non-static member functions other than constructors | cannot override a virtual function |
+| `explicit_specifier` | non-static member functions other than destructors | cannot be explicit |
+| `storage_duration` | variables | cannot have a storage duration |
+| `linkage` | variables, functions, templates | cannot have linkage |
+
+The other abilities say what a reflection is; their requirement is given with each below.
+
+### Deduced kinds: `reflect<R>`
+
+`reflect<R>` is `basic_interface<A...>` for every ability `A` in namespace `metalib::ability` that is marked
+`[[=auto_ability]]` and whose `check(R)` is true (abilities in canonical order, so the type is the same kind a
+`with_ability` of them gives). A value, an object or an annotation gets `typed_as<T>` for its type in place of
+`constant`, so the result converts to `typed_constant<T>`, `typed_object<T>` or `typed_annotation<T>` (and not to
+`constant`, `value`, `object` or `annotation`, which have the generic `extract<T>()`). An object of array type keeps
+`constant` and converts to `object`. The null reflection gives `basic_interface<ability::displayable>`.
+
+`R` must be a constant expression; use `make_reflection<K>(r)` for a reflection that is not. The exact type changes
+when an ability is added, so rely on the conversion to a named kind, not on the type itself.
+
+To add an ability of your own, declare it in `metalib::ability` before `reflect` is first used in the translation
+unit, identically in every translation unit:
+
+```cpp
+namespace metalib::ability {
+    struct [[=auto_ability]] single_letter {
+        static constexpr std::u8string_view requirement = u8"an entity with a one-letter name";
+        static consteval bool check(std::meta::info r) {
+            return std::meta::has_identifier(r) && std::meta::identifier_of(r).size() == 1;
+        }
+        consteval bool has_single_letter(this handle const &) { return true; }
+    };
+}
+```
 
 ### `identifiable`
 `has_identifier`, `has_u8identifier`, `try_get_identifier` / `get_identifier`,
@@ -210,7 +271,7 @@ Requirement: a namespace alias.
 
 ### `namespace_member_entity`
 Requirement: a namespace member.
-(check only)
+(check only; a reflection without a parent is not one: GCC reports fundamental types and objects as namespace members)
 
 ### `variable_entity`
 Requirement: a variable.
@@ -299,7 +360,7 @@ hard compile error, not a failure.
 |---|---|
 | `flatten(items...)` | `std::vector<handle>`: handles and (nested) ranges of handles, in order |
 | `reflect_constant(v)` | `typed_constant<T>` for a non-class `v` (a value), `typed_object<T>` for a class-type `v` (its template parameter object, a different object from `v` itself) |
-| `reflect_object(o)` | `typed_object<T>`: `o` itself (o needs static storage duration) |
+| `reflect_object(o)` | `typed_object<T>`, or `object` when `o` is an array: `o` itself (o needs static storage duration) |
 | `reflect_function(f)` | `handle` |
 | `reflect_constant_string(r)`, `reflect_constant_array(r)` | `object` (the array as a template parameter object) |
 | `try_get_current_function(ctx = current())` | `meta_result<handle>` |

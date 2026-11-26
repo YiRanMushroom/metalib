@@ -45,6 +45,7 @@ set(metalib_test_sources
         misc_test.cpp
         namespace_test.cpp
         nested_type_test.cpp
+        reflect_test.cpp
         template_test.cpp
         type_test.cpp
 )

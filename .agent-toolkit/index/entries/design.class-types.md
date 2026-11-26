@@ -13,7 +13,8 @@ Verified on GCC trunk 2026-11-25 by scratchpad class_check.cpp (every query comp
   handled yet: to be discussed next.
 - Construction (2026-11-26): the unchecked constructor is private (tag details::unchecked_tag) and only the friend
   details::reflect_unchecked<K>(r) calls it; library code uses that where the kind is certain. There is no public constructor from
-  std::meta::info since the second naming round (2026-11-26): users call reflect<K>(r) / try_reflect<K>(r). C++26 has
+  std::meta::info since the second naming round (2026-11-26): users call make_reflection<K>(r) / try_make_reflection<K>(r)
+  (named reflect / try_reflect until reflect<^^x> took the name, [[design.kind-deduction]]). C++26 has
   no way to call a constructor through reflection ([expr.prim.splice]/2 forbids splicing constructors; extract rejects
   them), so the library goes through the friend.
 

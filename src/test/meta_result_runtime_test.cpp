@@ -6,14 +6,16 @@ enum class color { red, green, blue };
 template <class E>
 constexpr std::string_view name_of(E v) {
     template for (constexpr metalib::enumerator e :
-                  metalib::array_literal(metalib::reflect<metalib::enum_type>(^^E).get_enumerators())) {
+                  metalib::array_literal(metalib::make_reflection<metalib::enum_type>(^^E).get_enumerators())) {
         if (v == e.extract<E>()) return e.get_identifier();
     }
     return {};
 }
 template <class E>
 constexpr std::size_t display_size_if_nonzero(E v) {
-    return std::to_underlying(v) != 0 ? metalib::reflect<metalib::enum_type>(^^E).get_u8display_string().size() : 0;
+    return std::to_underlying(v) != 0
+               ? metalib::make_reflection<metalib::enum_type>(^^E).get_u8display_string().size()
+               : 0;
 }
 TEST_CASE("meta_result: values cross into runtime") {
     volatile int index = 1;
@@ -21,7 +23,7 @@ TEST_CASE("meta_result: values cross into runtime") {
     REQUIRE(name_of(value) == "green");
     REQUIRE(display_size_if_nonzero(value) == std::meta::u8display_string_of(^^color).size());
     metalib::meta_result<metalib::string_literal> r =
-        metalib::reflect<metalib::type>(^^color).try_get_identifier();
+        metalib::make_reflection<metalib::type>(^^color).try_get_identifier();
     REQUIRE(r.has_value());
     REQUIRE(r.unwrap() == "color");
     REQUIRE(r.unwrap_or("fallback") == "color");
