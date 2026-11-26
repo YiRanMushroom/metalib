@@ -44,4 +44,6 @@ title = "Status"
   evaluation ~0.24 s). CLion's analysis is the slow part (60-280 s per test file, often times out).
 - Code review pass 2026-11-25: std algorithms / views where they pay off (measured, see [[build.compile-cost]]),
   array_literal accepts ranges whose element type only converts to T, layout-independent tests.
+- Queries returning several elements return std::vector (never static storage); materialize with array_literal;
+  see [[build.compile-cost]] (2026-11-25).
 - Clang support once clang adopts P4101.

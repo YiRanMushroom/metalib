@@ -29,7 +29,7 @@ static_assert(mb::template_{^^zero}.substitute({mb::type{^^int}}).unwrap().try_i
 static_assert(mb::template_{^^ptr}.substitute({mb::type{^^int}}).unwrap().try_into<mb::type>().unwrap() == mb::type{^^int *});
 static_assert(mb::template_{^^small}.is_concept() && mb::template_{^^small}.substitute({mb::type{^^char}}).unwrap().try_into<mb::value>().unwrap().extract<bool>().unwrap());
 // member templates
-constexpr auto mts = mb::class_type{^^S}.members<mb::member_template>(ctx);
+constexpr mb::array_literal mts = mb::class_type{^^S}.members<mb::member_template>(ctx);
 static_assert(mts.size() == 3 && mts[0].is_function_template() && mts[0].is_public());
 static_assert(mts[1].operator_kind().unwrap() == std::meta::op_equals_equals && mts[2].is_constructor_template() && !mts[0].operator_kind().has_value());
 TEST_CASE("template: compile-time checks") {

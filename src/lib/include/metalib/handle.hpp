@@ -319,16 +319,19 @@ namespace metalib {
         }
 
         template<typename H = handle>
-        consteval array_literal<H> static_handles(std::vector<std::meta::info> const &infos) {
-            return array_literal<H>(infos | std::views::transform([](std::meta::info r) { return H{r}; }));
+        consteval std::vector<H> handles_of(std::vector<std::meta::info> const &infos) {
+            std::vector<H> handles(infos.size());
+            for (std::size_t i = 0; i < infos.size(); ++i) {
+                handles[i] = H{infos[i]};
+            }
+            return handles;
         }
 
         template<typename T>
         consteval std::vector<std::meta::info> infos_of(std::vector<T> const &handles) {
-            std::vector<std::meta::info> infos;
-            infos.reserve(handles.size());
-            for (T const &h: handles) {
-                infos.push_back(h.info);
+            std::vector<std::meta::info> infos(handles.size());
+            for (std::size_t i = 0; i < handles.size(); ++i) {
+                infos[i] = handles[i].info;
             }
             return infos;
         }
@@ -341,16 +344,28 @@ namespace metalib {
 
         template<typename Element, typename Filter, typename Map>
         consteval auto select(std::vector<std::meta::info> const &infos, Filter filter, Map map) {
-            using result = std::remove_cvref_t<std::invoke_result_t<Map &, Element>>;
-            std::vector<result> selected;
-            selected.reserve(infos.size());
-            for (std::meta::info r: infos) {
-                Element element{r};
-                if (std::invoke(filter, element)) {
-                    selected.push_back(std::invoke(map, element));
-                }
+            std::vector<Element> elements = handles_of<Element>(infos);
+            if constexpr (!std::same_as<Filter, accept_all>) {
+                std::erase_if(elements, [&filter](Element const &element) { return !std::invoke(filter, element); });
             }
-            return array_literal<result>(selected);
+            if constexpr (std::same_as<Map, std::identity>) {
+                return elements;
+            } else {
+                using result = std::remove_cvref_t<std::invoke_result_t<Map &, Element const &>>;
+                std::vector<result> mapped;
+                if constexpr (std::default_initializable<result>) {
+                    mapped.resize(elements.size());
+                    for (std::size_t i = 0; i < elements.size(); ++i) {
+                        mapped[i] = std::invoke(map, elements[i]);
+                    }
+                } else {
+                    mapped.reserve(elements.size());
+                    for (Element const &element: elements) {
+                        mapped.push_back(std::invoke(map, element));
+                    }
+                }
+                return mapped;
+            }
         }
 
         template<typename Kind>
@@ -790,19 +805,19 @@ namespace metalib {
 
             consteval meta_result<metalib::template_> template_(this handle const &self);
 
-            consteval meta_result<array_literal<handle>> template_arguments(this handle const &self) {
+            consteval meta_result<std::vector<handle>> template_arguments(this handle const &self) {
                 if (!std::meta::has_template_arguments(self.info)) {
-                    return meta_result<array_literal<handle>>::failure(u8"reflection is not a template specialization",
-                                                                       self.info);
+                    return meta_result<std::vector<handle>>::failure(u8"reflection is not a template specialization",
+                                                                     self.info);
                 }
-                return details::static_handles(std::meta::template_arguments_of(self.info));
+                return details::handles_of(std::meta::template_arguments_of(self.info));
             }
         };
 
         struct annotatable {
-            consteval array_literal<annotation> annotations(this handle const &self);
+            consteval std::vector<annotation> annotations(this handle const &self);
 
-            consteval array_literal<annotation> annotations_with_type(this handle const &self,
+            consteval std::vector<annotation> annotations_with_type(this handle const &self,
                                                                       type const &annotation_type);
         };
 
@@ -860,7 +875,7 @@ namespace metalib {
 
             consteval type make_unsigned(this handle const &self);
 
-            consteval array_literal<enumerator> enumerators(this handle const &self);
+            consteval std::vector<enumerator> enumerators(this handle const &self);
         };
 
         struct parented {
@@ -929,10 +944,10 @@ namespace metalib {
                 return std::meta::has_inaccessible_subobjects(std::meta::dealias(self.info), ctx);
             }
 
-            consteval array_literal<handle> subobjects(this handle const &self,
+            consteval std::vector<handle> subobjects(this handle const &self,
                                                        std::meta::access_context ctx =
                                                                std::meta::access_context::current()) {
-                return details::static_handles(std::meta::subobjects_of(std::meta::dealias(self.info), ctx));
+                return details::handles_of(std::meta::subobjects_of(std::meta::dealias(self.info), ctx));
             }
         };
 
@@ -988,7 +1003,7 @@ namespace metalib {
         };
 
         struct callable {
-            consteval array_literal<parameter> parameters(this handle const &self);
+            consteval std::vector<parameter> parameters(this handle const &self);
 
             consteval bool is_noexcept(this handle const &self) {
                 return std::meta::is_noexcept(self.info);
@@ -1592,13 +1607,13 @@ namespace metalib {
         return type{std::meta::unwrap_ref_decay(self.info)};
     }
 
-    consteval array_literal<annotation> ability::annotatable::annotations(this handle const &self) {
-        return details::static_handles<annotation>(std::meta::annotations_of(self.info));
+    consteval std::vector<annotation> ability::annotatable::annotations(this handle const &self) {
+        return details::handles_of<annotation>(std::meta::annotations_of(self.info));
     }
 
-    consteval array_literal<annotation> ability::annotatable::annotations_with_type(this handle const &self,
+    consteval std::vector<annotation> ability::annotatable::annotations_with_type(this handle const &self,
         type const &annotation_type) {
-        return details::static_handles<
+        return details::handles_of<
             annotation>(std::meta::annotations_of_with_type(self.info, annotation_type.info));
     }
 
@@ -1638,12 +1653,12 @@ namespace metalib {
         return type{std::meta::make_unsigned(self.info)};
     }
 
-    consteval array_literal<enumerator> ability::enumeration::enumerators(this handle const &self) {
-        return details::static_handles<enumerator>(std::meta::enumerators_of(self.info));
+    consteval std::vector<enumerator> ability::enumeration::enumerators(this handle const &self) {
+        return details::handles_of<enumerator>(std::meta::enumerators_of(self.info));
     }
 
-    consteval array_literal<parameter> ability::callable::parameters(this handle const &self) {
-        return details::static_handles<parameter>(std::meta::parameters_of(self.info));
+    consteval std::vector<parameter> ability::callable::parameters(this handle const &self) {
+        return details::handles_of<parameter>(std::meta::parameters_of(self.info));
     }
 
     consteval type ability::signature::return_type(this handle const &self) {
@@ -1796,10 +1811,10 @@ namespace metalib {
 
     template<typename... Items>
         requires ((std::derived_from<Items, handle> || std::ranges::input_range<Items const>) && ...)
-    consteval array_literal<handle> flatten(Items const &... items) {
+    consteval std::vector<handle> flatten(Items const &... items) {
         std::vector<handle> out;
         (details::flatten_into(out, items), ...);
-        return array_literal<handle>(out);
+        return out;
     }
     consteval meta_result<template_> ability::templated::template_(this handle const &self) {
         if (!std::meta::has_template_arguments(self.info)) {

@@ -227,7 +227,7 @@ is not usable in constant expressions is a hard compile error, not a failure.
 
 | function | result |
 |---|---|
-| `flatten(items...)` | `array_literal<handle>`: handles and (nested) ranges of handles, in order |
+| `flatten(items...)` | `std::vector<handle>`: handles and (nested) ranges of handles, in order |
 | `reflect_constant(v)` | `handle` (a value for scalars, a template parameter object for class types) |
 | `reflect_object(o)` | `object` (o needs static storage duration) |
 | `reflect_function(f)` | `handle` |
@@ -243,7 +243,7 @@ is not usable in constant expressions is a hard compile error, not a failure.
 
 | variable template | value |
 |---|---|
-| `members<Scope, Kind = void, A = access::unprivileged>` | `Scope.members<Kind>(ctx)` (`Kind = void`: the scope's default kind) |
+| `members<Scope, Kind = void, A = access::unprivileged>` | `array_literal` of `Scope.members<Kind>(ctx)` (`Kind = void`: the scope's default kind) |
 | `bases<Class, A>`, `subobjects<Class, A>` | `Class.bases(ctx)`, `Class.subobjects(ctx)` |
 | `enumerators<Enum>` | `Enum.enumerators()` |
 | `parameters<Function>` | `Function.parameters()` |
@@ -268,7 +268,9 @@ is not usable in constant expressions is a hard compile error, not a failure.
 
 ## Literals (literal.hpp)
 
-- `array_literal<T>`: structural view over a `define_static_array` array; usable as a template argument and in
+- Queries returning several elements return `std::vector<K>`; materialize with `array_literal` when the result must
+  outlive constant evaluation (constexpr variables, `template for`, template arguments).
+- `array_literal<T>`: structural view over a `define_static_array` array (deduces `T` from a range); usable as a template argument and in
   `template for`; converts to `std::span<T const>`.
 - `string_literal` / `u8string_literal`: structural null-terminated strings over `define_static_string`;
   convert to `std::string_view` / `std::u8string_view`, compare with string views.

@@ -23,7 +23,7 @@ Added:
   nonstatic data members). storage_duration: object() -> meta_result<object>.
 - Kinds: value (is_value), object (is_object), annotation (is_annotation; typed, value<T>() via extract,
   constant_of() -> handle), structured_binding (identifiable, displayable; type_of throws on GCC).
-  annotations()/annotations_with_type() return array_literal<annotation>.
+  annotations()/annotations_with_type() return std::vector<annotation>.
 - Free functions: reflect_constant -> handle (value for scalars, object for class types), reflect_object -> object,
   reflect_function -> handle, reflect_constant_string / reflect_constant_array -> handle (GCC: the string result
   is not is_object), current_function / current_class / current_namespace (default ctx = caller; scope walk via

@@ -4,7 +4,7 @@
 enum class color { red, green, blue };
 template <class E>
 constexpr std::string_view name_of(E v) {
-    template for (constexpr metalib::enumerator e : metalib::enum_type{^^E}.enumerators()) {
+    template for (constexpr metalib::enumerator e : metalib::array_literal(metalib::enum_type{^^E}.enumerators())) {
         if (v == e.extract<E>().unwrap()) return e.ascii_identifier().unwrap();
     }
     return {};

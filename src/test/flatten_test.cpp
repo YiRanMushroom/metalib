@@ -6,7 +6,7 @@ struct B1 {}; struct B2 {};
 struct S : B1, B2 { int a; double b; };
 constexpr auto ctx = std::meta::access_context::unchecked();
 constexpr mb::class_type cs{^^S};
-constexpr auto all = mb::flatten(cs, cs.bases(ctx), cs.members<mb::data_member>(ctx));
+constexpr mb::array_literal all = mb::flatten(cs, cs.bases(ctx), cs.members<mb::data_member>(ctx));
 static_assert(all.size() == 5 && all[0].info == (^^S) && all[3].info == (^^S::a) && all[4].info == (^^S::b));
 consteval std::size_t nested() {
     std::vector<mb::array_literal<mb::data_member>> groups{cs.members<mb::data_member>(ctx), cs.members<mb::data_member>(ctx)};

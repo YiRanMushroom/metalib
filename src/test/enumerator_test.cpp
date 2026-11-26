@@ -12,7 +12,7 @@ static_assert(mb::handle{^^color::red}.try_into<mb::enumerator>().has_value() &&
 static_assert(c.enumerators()[0].u8_display_string().size() > 0);
 template <class E>
 constexpr std::string_view name_of(E v) {
-    template for (constexpr mb::enumerator e : mb::enum_type{^^E}.enumerators()) {
+    template for (constexpr mb::enumerator e : mb::array_literal(mb::enum_type{^^E}.enumerators())) {
         constexpr std::string_view name = e.ascii_identifier().unwrap();
         if (v == e.extract<E>().unwrap()) {
             return name;

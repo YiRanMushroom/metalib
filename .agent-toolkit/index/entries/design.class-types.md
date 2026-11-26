@@ -33,7 +33,7 @@ Verified on GCC trunk 2026-11-25 by scratchpad class_check.cpp (every query comp
 
 ## class_type : type (original notes)
 - from: is_type && (is_class_type || is_union_type) && is_complete_type. Queries call std::meta with dealias(info).
-- members<Kind = member>(ctx, filter, map) -> array_literal<map result>; Kind must be one of the member kinds below.
+- members<Kind = member>(ctx, filter, map) -> std::vector<map result> (array_literal before 2026-11-25); Kind must be one of the member kinds below.
   - member: members_of(cls, ctx) (all, includes unnamed bit-fields, member templates, nested types, aliases,
     implicitly declared special members that exist).
   - data_member: nonstatic_data_members_of(cls, ctx) (excludes unnamed bit-fields, so it is NOT members_of filtered).
@@ -64,7 +64,7 @@ Verified on GCC trunk 2026-11-25 by scratchpad class_check.cpp (every query comp
 - destructor: is_destructor. displayable, annotatable, accessible, callable, overridable.
 - base: is_base. displayable, annotatable, typed (base class type), accessible (parent = derived class); is_virtual, offset.
 - Abilities: accessible (is_public/protected/private, is_accessible(ctx), parent() -> class_type),
-  callable (parameters() -> array_literal<parameter>, noexcept/deleted/defaulted/user_provided/user_declared/vararg),
+  callable (parameters() -> std::vector<parameter>, noexcept/deleted/defaulted/user_provided/user_declared/vararg),
   signature (return_type, is_operator, operator_kind -> meta_result<operators>), overridable (virtual/pure/override/final).
 
 ## Literals (structural, so usable as template arguments and as map results)
@@ -74,5 +74,5 @@ Verified on GCC trunk 2026-11-25 by scratchpad class_check.cpp (every query comp
   constructor from string_view / CharT const* (copied with define_static_string); converts to string_view; == and <=>
   with string_view; default is an empty null-terminated string.
 - ascii_identifier/u8_identifier/ascii_display_string return meta_result<(u8)string_literal>; u8_display_string
-  returns u8string_literal. enumerators/annotations/template_arguments return array_literal.
+  returns u8string_literal. enumerators/annotations/template_arguments return std::vector (see [[build.compile-cost]]).
 - std::span and std::string_view are not structural (private members), which is why these exist.

@@ -28,7 +28,7 @@ static_assert(mb::type{^^int (*)(char)}.invoke_result_with({mb::type{^^char}}).u
 static_assert(!mb::type{^^int (*)(char)}.invoke_result_with({mb::type{^^A}}).has_value());
 static_assert(mb::type{^^int const &}.reference_constructs_from_temporary(mb::type{^^long}));
 // annotations, values, objects
-constexpr auto anns = mb::type{^^A}.annotations();
+constexpr mb::array_literal anns = mb::type{^^A}.annotations();
 static_assert(anns.size() == 2 && anns[0].extract<int>().unwrap() == 1 && anns[1].type() == mb::type{^^double});
 static_assert(anns[0].constant_of().try_into<mb::value>().unwrap().extract<int>().unwrap() == 1);
 static_assert(mb::handle{anns[0].info}.try_into<mb::annotation>().has_value() && !mb::handle{^^A}.try_into<mb::annotation>().has_value());

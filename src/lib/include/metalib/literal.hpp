@@ -47,6 +47,9 @@ namespace metalib {
         }
     };
 
+    template<std::ranges::input_range R>
+    array_literal(R &&) -> array_literal<std::ranges::range_value_t<R>>;
+
     template<typename CharT>
     struct basic_string_literal {
         CharT const *pointer = null_terminator;

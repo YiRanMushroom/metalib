@@ -83,15 +83,15 @@ static_assert(cs.members<mb::member_function>(unchecked, mb::predicate::from(&mb
 static_assert(cs.members<mb::member_function>(unchecked, mb::predicate::from(&mb::member_function::is_const).not_()).size() >= 2);
 static_assert(cs.members<mb::data_member>(unchecked, of_type<int>(), mb::transform::from(&mb::data_member::bit_size).and_then([](std::size_t n) { return n + 1; })).size() == 2);
 static_assert(cs.members<mb::data_member>(unchecked, !of_type(mb::type{^^int})).size() == 2);
-constexpr auto int_names = cs.members<mb::data_member>(unchecked, of_type(mb::type{^^int}), mb::transform::from([](auto const &x) { return x.ascii_identifier().unwrap(); }));
+constexpr mb::array_literal int_names = cs.members<mb::data_member>(unchecked, of_type(mb::type{^^int}), mb::transform::from([](auto const &x) { return x.ascii_identifier().unwrap(); }));
 static_assert(int_names[0] == "a" && int_names[1] == "p");
-constexpr auto type_names = cs.members<mb::data_member>(unchecked, {},
+constexpr mb::array_literal type_names = cs.members<mb::data_member>(unchecked, {},
     mb::transform::from([](mb::data_member d) { return d.type(); }).and_then([](mb::type t) { return t.ascii_display_string().unwrap(); }));
 static_assert(type_names[0] == "int" && type_names[2] == "double");
 static_assert(cs.members<mb::static_member_function>(unchecked, of_operator(op_parentheses)).size() == 1);
 
 // nested types
-constexpr auto nts = cs.members<mb::nested_type>(unchecked);
+constexpr mb::array_literal nts = cs.members<mb::nested_type>(unchecked);
 static_assert(nts.size() == 3 && nts[0].ascii_identifier().unwrap() == "nested" && nts[2].is_alias() && !nts[0].is_alias());
 static_assert(nts[2] == mb::type{^^int} && nts[2].parent().unwrap().info == cs.info && nts[1].try_into<mb::enum_type>().has_value());
 static_assert(cs.members<mb::nested_type>(unchecked, [](mb::nested_type t) { return !t.is_alias(); }).size() == 2);
@@ -112,18 +112,18 @@ static_assert(anon.parent().unwrap().info == ca.info && ca.members<mb::nested_ty
 
 // filter and map
 static_assert(cs.members<mb::data_member>(unchecked, [](mb::data_member d) { return d.is_bit_field(); }).size() == 1);
-constexpr auto names = cs.members<mb::data_member>(unchecked, {}, [](mb::data_member d) { return d.ascii_identifier().unwrap(); });
+constexpr mb::array_literal names = cs.members<mb::data_member>(unchecked, {}, [](mb::data_member d) { return d.ascii_identifier().unwrap(); });
 static_assert(names.size() == 4 && names[0] == "a" && names[1] == "bits" && names[3] == "p");
 
 // destructor and bases
 static_assert(cs.destructor(unchecked).unwrap().is_override() && cs.destructor(unchecked).unwrap().is_virtual());
-constexpr auto bs = cs.bases(unchecked);
+constexpr mb::array_literal bs = cs.bases(unchecked);
 static_assert(bs[0].type() == mb::type{^^B1} && !bs[0].is_virtual() && bs[0].is_public());
 static_assert(bs[1].type() == mb::type{^^B2} && bs[1].is_virtual() && bs[1].is_private());
 static_assert(bs[0].parent().unwrap().info == ^^S);
 
 // data members
-constexpr auto dms = cs.members<mb::data_member>(unchecked);
+constexpr mb::array_literal dms = cs.members<mb::data_member>(unchecked);
 static_assert(dms[1].bit_size() == 5 && dms[2].is_mutable() && dms[2].has_default_member_initializer());
 static_assert(dms[0].parent().unwrap().info == cs.info && dms[0].type() == mb::type{^^int} && dms[3].is_private());
 
@@ -138,7 +138,7 @@ static_assert(fn("f").is_lvalue_reference_qualified() && fn("v").is_virtual() &&
 constexpr auto plus = cs.members<mb::member_function>(unchecked, [](mb::member_function f) { return f.is_operator(); })[0];
 static_assert(plus.operator_kind().unwrap() == op_plus && plus.return_type() == mb::type{^^int});
 static_assert(!fn("f").operator_kind().has_value());
-constexpr auto conv = cs.members<mb::member_function>(unchecked, [](mb::member_function f) { return f.is_conversion(); });
+constexpr mb::array_literal conv = cs.members<mb::member_function>(unchecked, [](mb::member_function f) { return f.is_conversion(); });
 static_assert(conv.size() == 1 && conv[0].is_explicit() && conv[0].return_type() == mb::type{^^bool});
 static_assert(cs.members<mb::static_member_function>(unchecked, [](auto f) { return f.is_operator(); }).size() == 1);
 

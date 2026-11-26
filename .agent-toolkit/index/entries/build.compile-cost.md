@@ -17,3 +17,11 @@ Code: [[src/lib/include/metalib/handle.hpp]] (details::static_handles, details::
   than once and the user's filter runs repeatedly; ~2x slower with a filter that itself queries). select keeps a
   loop so each filter runs once per element.
 - Benchmarks: scratchpad bench_params.cpp, bench_direct.cpp, bench_mix.cpp, t_lib.cpp.
+- Decision (2026-11-25, with the user): queries returning several elements return std::vector<K> (built with a sized
+  vector and indexed assignment; filter via std::erase_if, map into a second sized vector) and are never promoted to
+  static storage; users materialize with array_literal (CTAD) when needed; cache:: variable templates materialize.
+  Measured on 300 queries: push_back 165M, ranges::to 139M, iterator ctor 112M, sized + indexed 97M, lazy owning
+  transform view 89M (std call alone 56M). Result vs the previous static-array design: direct queries 248M -> 173M,
+  parameters 144M -> 119M, filter+map 727M -> 633M; include only 230M -> 218M total.
+- Rejected: returning lazy views (filter_view::begin is not const, so a constexpr filter view is unusable; views are not
+  structural; per-call-site view instantiations: template-instantiation memory 132M -> 1173M on the filter+map bench).

@@ -30,7 +30,7 @@ static_assert(names<mb::nested_union>(cs.members<mb::nested_union>(ctx), {"u", "
 static_assert(names<mb::nested_enum>(cs.members<mb::nested_enum>(ctx), {"color"}));
 static_assert(names<mb::nested_alias>(cs.members<mb::nested_alias>(ctx), {"td", "alias"}));
 // results keep their parent and their kind abilities
-constexpr auto classes = cs.members<mb::nested_class>(ctx);
+constexpr mb::array_literal classes = cs.members<mb::nested_class>(ctx);
 static_assert(classes[0].parent().unwrap().info == cs.info && classes[1].is_private() && classes[0].members<mb::data_member>(ctx).size() == 1);
 static_assert(cs.members<mb::nested_enum>(ctx)[0].enumerators().size() == 1);
 static_assert(cs.members<mb::nested_alias>(ctx)[1] == mb::type{^^S::defined});

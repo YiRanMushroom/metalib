@@ -11,8 +11,8 @@ namespace mb = metalib;
 struct point { int x; int y; double weight; };
 
 constexpr mb::class_type cls = mb::type{^^point}.try_into<mb::class_type>().unwrap();
-constexpr auto ints = cls.members<mb::data_member>(std::meta::access_context::current(),
-                                                   mb::predicate::of_type<int>());
+constexpr mb::array_literal ints = cls.members<mb::data_member>(std::meta::access_context::current(),
+                                                                mb::predicate::of_type<int>());
 static_assert(ints.size() == 2 && ints[1].ascii_identifier().unwrap() == "y");
 static_assert(ints[0].type() == mb::type{^^int} && ints[0].offset().bytes == 0);
 ```
@@ -75,20 +75,28 @@ calls that cannot fail return the value. `unwrap()` throws `std::meta::exception
 compile error with the message) and `metalib::meta_exception` at runtime; also `has_value()`, `unwrap_or(v)`,
 `error()` (`u8what()`, `from()`, `where()`). Thrown `std::meta::exception`s are converted with their message.
 
-### Results that outlive constant evaluation
+### Results: vectors, materialized when needed
 
-Ranges come back as `array_literal<K>` and strings as `string_literal` / `u8string_literal`: static storage,
-structural, usable in `template for`, as template arguments and at runtime.
+Queries that return several elements return `std::vector<K>`: nothing is promoted to static storage, which keeps
+constant evaluation cheap. Use the result directly inside a consteval function or a constant expression
+(`cls.members<mb::data_member>().size()`, `[0]`, range-for). A `std::vector` cannot outlive constant evaluation, so
+materialize it once when it must: `array_literal` (and `string_literal` / `u8string_literal` for strings) holds the
+data in static storage, is structural, and works in `template for`, as a template argument and at runtime.
+`array_literal` deduces its element type from the range.
 
 ```cpp
+constexpr mb::array_literal fields = cls.members<mb::data_member>();   // constexpr variable: materialize
+
 template<class E>
 constexpr std::string_view name_of(E v) {
-    template for (constexpr mb::enumerator e : mb::enum_type{^^E}.enumerators()) {
+    template for (constexpr mb::enumerator e : mb::array_literal(mb::enum_type{^^E}.enumerators())) {
         if (v == e.extract<E>().unwrap()) return e.ascii_identifier().unwrap();
     }
     return {};
 }
 ```
+
+`metalib::cache` variable templates (below) hold materialized results.
 
 ### Queries: access context, filter, map
 
