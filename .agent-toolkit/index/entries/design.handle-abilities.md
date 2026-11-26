@@ -48,7 +48,8 @@ Decisions made with the user (2026-11-24):
   only adds abilities its base lacks; repeating one would make an ambiguous duplicate base. `interface<...>` stays as the
   erased view. Its converting ctor accepts any `Source` derived from handle and from every target ability, so hand-written
   kinds convert to any subset view too.
-- **Narrowing is a query:** `handle::try_into<T>()` calls `T::from(handle const &)` and returns `meta_result<T>`; there is no
+- **Narrowing is a query:** `handle::try_into<T>()` calls `T::try_from(handle const &)` (named `T::from` until
+  2026-11-26) and returns `meta_result<T>`; there is no
   implicit superset conversion. Kind split follows big ability differences only: arithmetic (integral, floating, bool,
   char), enum, class/union. Pointers, references, arrays, function types, member pointers, void, nullptr_t and info
   are plain `type`. try_into keeps the original info (an alias stays an alias: identifier() gives the alias name).
@@ -117,4 +118,8 @@ Decisions made with the user (2026-11-24):
   lt_* case passes, including non-template and aggregate ones, and the full metalib name_of with
   `return e.ascii_identifier().unwrap();` in a template gives: OK. No GCC report matches our exact case; related:
   PR125797 (spurious escalation via templates), PR128386 (ubsan regression after P4101).
-- Narrowing that cannot fail uses the kind's explicit constructor directly (it does no check); `try_into` / `T::from` are for checked narrowing.
+- Narrowing that cannot fail uses details::reflect_unchecked (the kind constructor is private and the public K{r}
+  checks, see [[design.class-types]]); `try_into` / `T::from` are for checked narrowing.
+- Function names in this note are from 2026-11-24/25. Since 2026-11-26 the functions that can fail come as
+  try_<verb> / plain pairs (ascii_identifier() is now try_get_ascii_identifier() / get_ascii_identifier()), see
+  [[conventions.naming]].

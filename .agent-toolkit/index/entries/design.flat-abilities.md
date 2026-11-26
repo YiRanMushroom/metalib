@@ -23,7 +23,8 @@ Code: [[src/lib/include/metalib/handle.hpp]]. Verified on GCC trunk 2026-11-25 (
 - The template is not renamed to `interface`: Windows headers (MinGW basetyps.h) `#define interface struct`.
 - Optional ability members: `static consteval bool check(info)` + `static constexpr u8string_view requirement`
   (kind's holds/from = conjunction; from reports "reflection is not <requirement>" for the first unmet one), and
-  `static consteval bool equal(info, info)` (operator== uses the left kind's first equal, else info ==).
+  `static consteval bool equal(info, info)` (operator== uses the first equal among both kinds' abilities, else info ==; changed 2026-11-26 from "left kind's
+  first equal" because a == b and b == a could differ).
   Each check must be safe on its own (e.g. arithmetic checks is_type first), since order is type_order.
 - Same-named functions live in one small ability shared through sets: virtual_specifier (is_virtual),
   override_specifier, explicit_specifier; overridable = ability_set<virtual_specifier, override_specifier>.
@@ -31,18 +32,18 @@ Code: [[src/lib/include/metalib/handle.hpp]]. Verified on GCC trunk 2026-11-25 (
   (class or union, complete; members/destructor/has_inaccessible_nonstatic_data_members), class_record (bases ...),
   union_record, class_member, nonstatic_data, static_data, nonstatic_function, static_function, constructor_entity,
   destructor_entity, base_entity, enumerator_entity, parameter_entity.
-- Parent is untyped (decided 2026-11-25): ability::parented gives has_parent() and parent() -> meta_result<handle>
+- Parent is untyped (decided 2026-11-25): ability::parented gives has_parent(), try_get_parent() -> meta_result<handle>
+  and get_parent() -> handle
   (parent_of throws without a parent: int, the global namespace). Every declaration kind has it; the user checks
   and casts (try_into). Typed parents (a former child_of<Set> ability) were dropped: the parent's own kind and
-  its parents cannot all be carried in the type. Queries (members, bases, destructor) return the plain kinds.
-  The ability is not named parent because a function parent() inside a struct named parent is a constructor.
+  its parents cannot all be carried in the type. Queries (members, bases, find_destructor) return the plain kinds.
+  The ability is not named parent because a function parent() inside a struct named parent is a constructor (the
+  functions are get_parent / try_get_parent since 2026-11-26, see [[conventions.naming]]).
 - A consteval function's address cannot be stored in a constexpr variable; passing it as an argument works.
 - Nested types (2026-11-25): nested_type = type + member abilities (everything, aliases and the unnamed
   anonymous-union type included). nested_class / nested_union / nested_enum = nested_type + class_type / union_type /
   enum_type + non_alias; nested_alias = nested_type + type_alias. non_alias is needed because an alias to a class
   (`using alias = defined;`) also satisfies the dealiasing class checks. Verified by scratchpad nested_check.cpp
   (order, names, parent, kind abilities, checked narrowing messages).
-- Member names drop the std "_of" suffix where the member reads naturally (2026-11-25): typed::type(),
-  templated::template_(). Inside the ability that declares such a member the kind must be written metalib::type /
-  metalib::template_ (the member hides it). annotation keeps constant_of(): a member named constant would be
-  ambiguous with the injected class name of ability::constant.
+- Member names (2026-11-26): the std "_of" suffix is dropped and every accessor is a verb phrase (get_type,
+  get_template, get_constant, get_members); function names in older notes predate this, see [[conventions.naming]].

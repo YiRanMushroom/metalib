@@ -24,9 +24,9 @@ namespace metalib {
         consteval array_literal(R &&range) {
             std::span<T const> array;
             if constexpr (std::same_as<std::ranges::range_value_t<R>, T>) {
-                array = std::define_static_array(range);
+                array = std::define_static_array(std::forward<R>(range));
             } else {
-                array = std::define_static_array(range | std::views::transform([](auto &&element) -> T {
+                array = std::define_static_array(std::forward<R>(range) | std::views::transform([](auto &&element) -> T {
                     return static_cast<T>(std::forward<decltype(element)>(element));
                 }));
             }
@@ -102,12 +102,12 @@ namespace metalib {
             return pointer[i];
         }
 
-        friend constexpr bool operator==(basic_string_literal a, std::basic_string_view<CharT> b) {
-            return a.view() == b;
+        friend constexpr bool operator==(std::basic_string_view<CharT> a, std::basic_string_view<CharT> b) {
+            return a == b;
         }
 
-        friend constexpr auto operator<=>(basic_string_literal a, std::basic_string_view<CharT> b) {
-            return a.view() <=> b;
+        friend constexpr auto operator<=>(std::basic_string_view<CharT> a, std::basic_string_view<CharT> b) {
+            return a <=> b;
         }
     };
 

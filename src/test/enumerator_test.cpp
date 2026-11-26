@@ -3,18 +3,18 @@
 #include <string_view>
 namespace mb = metalib;
 enum class color { red, green, blue };
-constexpr mb::enum_type c{^^color};
-static_assert(c.enumerators().size() == 3);
-static_assert(c.enumerators()[1].ascii_identifier().unwrap() == "green");
-static_assert(c.enumerators()[2].extract<color>().unwrap() == color::blue);
-static_assert(c.enumerators()[0].type() == mb::type{^^color});
-static_assert(mb::handle{^^color::red}.try_into<mb::enumerator>().has_value() && !mb::handle{^^int}.try_into<mb::enumerator>());
-static_assert(c.enumerators()[0].u8_display_string().size() > 0);
+constexpr auto c = mb::reflect<mb::enum_type>(^^color);
+static_assert(c.get_enumerators().size() == 3);
+static_assert(c.get_enumerators()[1].get_identifier() == "green");
+static_assert(c.get_enumerators()[2].extract<color>() == color::blue);
+static_assert(c.get_enumerators()[0].get_type() == mb::reflect<mb::type>(^^color));
+static_assert(mb::try_reflect<mb::enumerator>(^^color::red).has_value() && !mb::try_reflect<mb::enumerator>(^^int));
+static_assert(c.get_enumerators()[0].get_u8display_string() == std::meta::u8display_string_of(^^color::red));
 template <class E>
 constexpr std::string_view name_of(E v) {
-    template for (constexpr mb::enumerator e : mb::array_literal(mb::enum_type{^^E}.enumerators())) {
-        constexpr std::string_view name = e.ascii_identifier().unwrap();
-        if (v == e.extract<E>().unwrap()) {
+    template for (constexpr mb::enumerator e : mb::array_literal(mb::reflect<mb::enum_type>(^^E).get_enumerators())) {
+        constexpr std::string_view name = e.get_identifier();
+        if (v == e.extract<E>()) {
             return name;
         }
     }

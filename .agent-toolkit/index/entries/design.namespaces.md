@@ -24,7 +24,7 @@ Kinds:
 - namespace_ (not an alias; members<Kind = namespace_member>(ctx, filter, map)), namespace_alias (target() -> namespace_), namespace_member (default query kind),
   variable (namespace_member + typed, sized, linkage, storage_duration), function (namespace_member + typed,
   callable, signature, linkage). static_data_member also uses linkage + storage_duration.
-- parent() is untyped (meta_result<handle>); the global namespace has no parent.
+- get_parent() / try_get_parent() are untyped (handle / meta_result<handle>); the global namespace has no parent.
 - metalib::global_namespace is namespace_{^^::}.
 - Types in a namespace are queried with the type kinds: members<type>, members<class_type::with_ability<
   ability::non_alias>>, ...

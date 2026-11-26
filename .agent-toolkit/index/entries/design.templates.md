@@ -8,12 +8,17 @@ template_check.cpp. GCC trunk snapshot 17-20261122, 2026-11-25.
 
 Wrapper (simple translation, decided with the user):
 - template_ = parented, identifiable, displayable, linkage, template_entity (check is_template: the is_*_template
-  predicates, is_concept, operator_kind() via is_operator_function_template, can_substitute(handles),
-  substitute(handles) -> meta_result<handle>, failing with "can_substitute returned false" when can_substitute is
-  false). member_template = template_ + accessible + class_member (members<member_template>()).
-- The substitute result is untyped; narrow with try_into (class template -> type, function templates -> function,
+  predicates, is_concept, get_operator_kind() via is_operator_function_template, can_substitute(handles),
+  try_substitute(handles) -> meta_result<handle> (substitute unwraps): calls std::meta::substitute directly; failure message
+  "unable to substitute(<argument display strings>) into '<template display string>'"; GCC displays a template as its
+  head, e.g. "template<class T>  requires  sizeof (T) == 1 struct small_box", without default arguments).
+- GCC substitutes with tf_none (eval_can_substitute / eval_substitute in reflect.cc), so no diagnostic exists for a
+  failed substitution; the std::meta::exception only says "can_substitute returned false". The compiler's reason is
+  visible only by writing the template-id itself as a constant splice. member_template = template_ + accessible + class_member (members<member_template>()).
+- The substitute result is untyped; narrow with into / try_into (class template -> type, function templates -> function,
   variable template -> variable, alias template -> type alias, concept -> bool value).
-- templated (has_template_arguments, template_() -> meta_result<template_>, template_arguments) is on type,
+- templated (has_template_arguments, try_get_template() -> meta_result<template_>, try_get_template_arguments(); the
+  get_ forms unwrap) is on type,
   function, member_function, static_member_function, variable, static_data_member.
 
 What can be known:

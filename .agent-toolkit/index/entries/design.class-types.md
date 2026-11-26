@@ -11,13 +11,18 @@ Verified on GCC trunk 2026-11-25 by scratchpad class_check.cpp (every query comp
   (as a default argument it means the caller's scope: verified, outside sees 3 data members, a friend sees 4).
 - Kinds split only where abilities differ a lot. Templates (member templates, deducing-this templates) are not
   handled yet: to be discussed next.
-- Narrowing that cannot fail uses the kind's explicit constructor; try_into / T::from are for checked narrowing.
+- Construction (2026-11-26): the unchecked constructor is private (tag details::unchecked_tag) and only the friend
+  details::reflect_unchecked<K>(r) calls it; library code uses that where the kind is certain. There is no public constructor from
+  std::meta::info since the second naming round (2026-11-26): users call reflect<K>(r) / try_reflect<K>(r). C++26 has
+  no way to call a constructor through reflection ([expr.prim.splice]/2 forbids splicing constructors; extract rejects
+  them), so the library goes through the friend.
 
 ## Record kinds (2026-11-25 update)
 - class_type: is_class_type && complete (no unions). union_type: is_union_type && complete. Both get the shared
-  ability::record: members<Kind>(ctx, filter, map), destructor(ctx), has_inaccessible_nonstatic_data_members(ctx).
-  class_type alone has bases(...), has_inaccessible_bases/subobjects. accessible::parent() returns type (a member's
-  parent may be a class or a union); narrow with try_into.
+  ability::record: members<Kind>(ctx, filter, map), find_destructor(ctx) / try_find_destructor(ctx),
+  has_inaccessible_nonstatic_data_members(ctx).
+  class_type alone has bases(...), has_inaccessible_bases/subobjects. parented::get_parent() returns an untyped handle (a
+  member's parent may be a class or a union); narrow with into / try_into.
 - nested_type : type, accessible. holds: is_type && is_class_member. Covers nested classes (also incomplete,
   declared-only ones), enums, typedef/using aliases, and the unnamed type behind an anonymous union/struct.
   type::is_alias() (is_type_alias) tells alias declarations apart; type comparison still dealiases.
@@ -32,7 +37,8 @@ Verified on GCC trunk 2026-11-25 by scratchpad class_check.cpp (every query comp
   (`this auto self`) cannot be passed this way; non-template `this handle const &self` ones can (verified).
 
 ## class_type : type (original notes)
-- from: is_type && (is_class_type || is_union_type) && is_complete_type. Queries call std::meta with dealias(info).
+- from: is_type && (is_class_type || is_union_type) && is_complete_type. Queries pass the reflection as is: members_of / bases_of
+  dealias their argument (working draft; verified on GCC trunk), so the earlier dealias calls were dropped 2026-11-26.
 - members<Kind = member>(ctx, filter, map) -> std::vector<map result> (array_literal before 2026-11-25); Kind must be one of the member kinds below.
   - member: members_of(cls, ctx) (all, includes unnamed bit-fields, member templates, nested types, aliases,
     implicitly declared special members that exist).
@@ -40,7 +46,7 @@ Verified on GCC trunk 2026-11-25 by scratchpad class_check.cpp (every query comp
   - static_data_member: static_data_members_of(cls, ctx).
   - member_function / static_member_function / constructor: members_of(cls, ctx) filtered by Kind::holds.
 - bases(ctx, filter, map) -> bases_of(cls, ctx).
-- destructor(ctx) -> meta_result<destructor>: the is_destructor entry of members_of (only the selected
+- try_find_destructor(ctx) -> meta_result<destructor> (find_destructor(ctx) unwraps): the is_destructor entry of members_of (only the selected
   prospective destructor is ever listed), failure if none is listed in that access context.
 - has_inaccessible_bases / _nonstatic_data_members / _subobjects(ctx).
 - filter takes the Kind by value; map's result must be structural (handles, string_literal, ...), it is stored
@@ -63,9 +69,9 @@ Verified on GCC trunk 2026-11-25 by scratchpad class_check.cpp (every query comp
   accepts extract of a constructor pointer and then fails to link).
 - destructor: is_destructor. displayable, annotatable, accessible, callable, overridable.
 - base: is_base. displayable, annotatable, typed (base class type), accessible (parent = derived class); is_virtual, offset.
-- Abilities: accessible (is_public/protected/private, is_accessible(ctx), parent() -> class_type),
+- Abilities: accessible (is_public/protected/private, is_accessible(ctx); the parent comes from parented),
   callable (parameters() -> std::vector<parameter>, noexcept/deleted/defaulted/user_provided/user_declared/vararg),
-  signature (return_type, is_operator, operator_kind -> meta_result<operators>), overridable (virtual/pure/override/final).
+  signature (return_type, is_operator, try_get_operator_kind -> meta_result<operators>, get_operator_kind), overridable (virtual/pure/override/final).
 
 ## Literals (structural, so usable as template arguments and as map results)
 - array_literal<T>: public pointer/length, view_interface (size, [], empty, data), contiguous, borrowed; consteval
@@ -73,6 +79,7 @@ Verified on GCC trunk 2026-11-25 by scratchpad class_check.cpp (every query comp
 - basic_string_literal<CharT> (string_literal, u8string_literal): public pointer/length, null-terminated, consteval
   constructor from string_view / CharT const* (copied with define_static_string); converts to string_view; == and <=>
   with string_view; default is an empty null-terminated string.
-- ascii_identifier/u8_identifier/ascii_display_string return meta_result<(u8)string_literal>; u8_display_string
-  returns u8string_literal. enumerators/annotations/template_arguments return std::vector (see [[build.compile-cost]]).
+- try_get_ascii_identifier / try_get_u8_identifier / try_get_ascii_display_string return
+  meta_result<(u8)string_literal> (the get_ forms unwrap); u8_display_string
+  returns u8string_literal. enumerators / annotations / get_template_arguments return std::vector (see [[build.compile-cost]]).
 - std::span and std::string_view are not structural (private members), which is why these exist.

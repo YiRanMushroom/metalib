@@ -7,7 +7,6 @@
 #include <metalib/handle.hpp>
 #include <string>
 #include <string_view>
-#include <type_traits>
 
 namespace metalib {
     consteval std::string to_string(handle const &h) {

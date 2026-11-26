@@ -21,15 +21,6 @@ namespace metalib::details {
             text.size());
     }
 
-    consteval std::optional<std::u8string_view> ascii_to_u8(std::string_view text) {
-        if (!is_ascii(text)) {
-            return std::nullopt;
-        }
-        return std::u8string_view(
-            std::define_static_string(text | std::views::transform([](char c) { return static_cast<char8_t>(c); })),
-            text.size());
-    }
-
     consteval std::u8string_view static_u8(std::u8string_view text) {
         return std::u8string_view(std::define_static_string(text), text.size());
     }

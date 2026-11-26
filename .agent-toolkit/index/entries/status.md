@@ -11,12 +11,11 @@ title = "Status"
   [[design.class-types]], [[design.namespaces]], [[design.misc-queries]], [[design.templates]],
   [[design.annotations]]; older background: [[design.handle-abilities]], [[reflection.universal-queries]],
   [[reflection.handle-prototype]], [[reflection.expansion-statements]]. Build: [[build.cmake-setup]].
-- User docs: README.md and docs/reference.md (generated from handle.hpp by hand-run script; regenerate or edit when
-  kinds/abilities change).
+- User docs: README.md and docs/reference.md (written against handle.hpp; edit them when kinds/abilities change).
 
 ## Verified
 - GCC trunk (C:/mingw64-gcc-trunk, gcc-17-20261122) on Windows: CMake build + ctest 16/16 (src/test, one executable
-  per file, mostly static_asserts; identifier_test also built with METALIB_HAS_META_EXCEPTION=0), 2026-11-25.
+  per file, mostly static_asserts; identifier_test also built with METALIB_HAS_META_EXCEPTION=0), 2026-11-26.
 - Not verified: any clang (clang-p2996 still uses the old consteval-only type model and is expected to reject parts),
   GCC 16.x (rejects meta_result with info), compile-time cost on large code.
 
@@ -42,7 +41,6 @@ title = "Status"
   template_arguments keyed by a kind value; access::unprivileged or access::unchecked since a variable template cannot
   see the caller's scope; annotations not cached) and message.hpp (message(parts...) -> std::string usable as a
   static_assert message; to_string / to_u8string). Narrowing failures now read "reflection '<display>' is not <req>".
-  300 repeated member queries: 4.0 s direct vs 2.5 s cached (base include 1.6 s).
 - Overloaded names: ^^f on an overload set is a hard error; select one overload by name (members + of_name) or pass
   an expression designating one function to reflect_function (e.g. through a cast to the function pointer type).
 - Measured 2026-11-25 (GCC trunk, -fsyntax-only): <meta> alone 1.0 s, + metalib.hpp 1.6 s (parsing 84%, constant
@@ -51,4 +49,35 @@ title = "Status"
   array_literal accepts ranges whose element type only converts to T, layout-independent tests.
 - Queries returning several elements return std::vector (never static storage); materialize with array_literal;
   see [[build.compile-cost]] (2026-11-25).
+- Errors (2026-11-26, decided with the user): meta_result holds a metalib::meta_error (plain value: message, action,
+  from, where; throw_() throws meta_exception, which carries the meta_error). std::meta::exception is only caught,
+  never rethrown or wrapped; failed operations say "unable to <verb> <call(operands)> <preposition> '<display string>' [of type 'T']",
+  e.g. "unable to find common_type_with(A) from 'int'" (details::unable / call_of / template_call_of / attempt(f,
+  describe); the message is built only on failure; type_if_any catches type_of's exception).
+  meta_result: std::expected-style U&& constructor (forwarding, excludes meta_result / meta_error), unwrap() and
+  unwrap_or(T) take an explicit object parameter so rvalue results move out; meta_result<T&> keeps working. Rejected: wrapping
+  std::meta::exception (its message carries no reason; GCC substitutes with tf_none).
+- Narrowing shortcuts (2026-11-26, user request): try_reflect<K>(info) -> meta_result<K>, reflect<K>(info) -> K;
+  h.into<K>() = try_into + unwrap; meta_result<handle kind> has try_into<K>() (keeps the original error) and into<K>().
+- Done 2026-11-26 : kind constructor private + friend details::reflect_unchecked, public K{r} checked
+  (bench_params constant evaluation 119M -> 135M from the per-construction check; include-only unchanged); review of
+  four read-only agents applied: meta_result constructor excludes other meta_results and temporaries for reference T,
+  [[nodiscard]], noexcept accessors, consteval try_into/into; details::kind concept for try_into / into / reflect;
+  symmetric operator==; precondition messages name the reflection; where() of "unable" errors is the failing wrapper;
+  tuple-like / variant checks strip cv; moves of callables and data_member_options; std::forward for ranges;
+  redundant dealias dropped; flatten constraint matches its body; reflect_constant / object / function carry std's
+  constraints; METALIB_HAS_META_EXCEPTION lives in handle.hpp; ascii_to_u8 removed; string_literal comparisons are
+  unambiguous; tests no longer depend on GCC spellings or member order; docs updated.
+- Done 2026-11-26 : functions that can fail come as try_<verb> (meta_result) / plain (value) pairs;
+  nouns became get_ / find_ / make_ verb phrases; K::try_from / K::from, try_reflect / reflect; cache::template_arguments
+  holds the array ([[conventions.naming]]). Tests, README and reference updated by three parallel agents (10-14 min
+  each). Full build + ctest 16/16, README examples compile, include-only compile memory unchanged (217M).
+- Done 2026-11-26 , second naming round decided by the user ([[conventions.naming]]): every accessor is
+  a verb phrase (get_ existing / find_ computed / make_ constructed), independent of fallibility; get_destructor;
+  new fallible pairs try_get_/get_ for type, size, alignment, return_type, enumerators, base offset; the plain form of
+  a pair attaches its ability (details::attach_ability_unchecked) and unwraps the try_ form; public
+  try_attach_ability / attach_ability on kinds; std-style text names (get_identifier / get_u8identifier, no "ascii"); kinds have no public constructor from info (reflect<K>(r) only; tests use it).
+  Full build + ctest 16/16, README examples compile, include-only compile memory 223M (was 217M).
+- Out-of-line ability definitions in handle.hpp are ordered by ability and declaration order (2026-11-26); they stay
+  out of line because the kinds they return are complete only after every ability is declared.
 - Clang support once clang adopts P4101.

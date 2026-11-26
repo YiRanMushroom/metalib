@@ -6,7 +6,7 @@ Code: [[src/lib/include/metalib/handle.hpp]]. Probe: scratchpad misc_probe.cpp; 
 2026-11-25.
 
 Failure handling (meta_result only where the std call can fail):
-- details::attempt<T>(f) turns a thrown std::meta::exception into meta_result<T>::failure(u8what, from, where)
+- details::attempt<T>(f, describe) catches std::meta::exception and returns the meta_error that describe builds
   (on clang, METALIB_HAS_META_EXCEPTION=0, it just calls f). Used for common_type, common_reference, invoke_result,
   object_of, variable_of, data_member_spec, define_aggregate.
 - tuple_size(int) / variant_size on a non-variant are hard compile errors in GCC, not throws: checked first with
@@ -14,21 +14,22 @@ Failure handling (meta_result only where the std call can fail):
 - constant_of(non-constexpr variable) is a hard error: not offered on variables; annotation has constant_of().
 
 Added:
-- type_traits: reference_constructs/converts_from_temporary, tuple_size, variant_size (meta_result<size_t>).
-- type_transforms: tuple_element(i), variant_alternative(i), common_type_with(types), common_reference_with(types),
-  invoke_result_with(args) (meta_result<type>).
+- type_traits: reference_constructs/converts_from_temporary, try_get_tuple_size, try_get_variant_size
+  (meta_result<size_t>; the get_ forms unwrap).
+- type_transforms: get_tuple_element(i), get_variant_alternative(i), find_common_type_with(types),
+  find_common_reference_with(types), find_invoke_result_with(args), each with a try_ form returning meta_result<type>.
 - displayable: source_location() (line 0 for fundamental types).
-- signature: is_literal_operator, operator_symbol() (meta_result<string_literal>); nonstatic_function: is_assignment.
-- parameter: variable() -> meta_result<handle> (variable_of). class_record: subobjects(ctx) -> handles (bases, then
-  nonstatic data members). storage_duration: object() -> meta_result<object>.
+- signature: is_literal_operator, try_get_operator_symbol() (meta_result<string_literal>) / get_operator_symbol(); nonstatic_function: is_assignment.
+- parameter: try_get_variable() -> meta_result<handle> (variable_of) / get_variable(). class_record: subobjects(ctx) -> handles (bases, then
+  nonstatic data members). storage_duration: try_get_object() -> meta_result<object> / get_object().
 - Kinds: value (is_value), object (is_object), annotation (is_annotation; typed, value<T>() via extract,
   constant_of() -> handle), structured_binding (identifiable, displayable; type_of throws on GCC).
   annotations()/annotations_with_type() return std::vector<annotation>.
 - Free functions: reflect_constant -> handle (value for scalars, object for class types), reflect_object -> object,
   reflect_function -> handle, reflect_constant_string / reflect_constant_array -> handle (GCC: the string result
-  is not is_object), current_function / current_class / current_namespace (default ctx = caller; scope walk via
-  parent_of; equal to the std versions where probed), data_member_spec(type, options) / define_aggregate(type,
-  specs) (usable from a consteval block).
+  is not is_object), get_current_function / get_current_class (with try_ forms) / current_namespace (default ctx = caller; scope walk via
+  parent_of; equal to the std versions where probed), make_data_member_spec(type, options) / define_aggregate(type,
+  specs), each with a try_ form (usable from a consteval block).
 
 Meaning (for reference):
 - subobjects_of(class) = bases then nonstatic data members, in that order (construction/comparison order); kept as a
@@ -50,7 +51,7 @@ non-static data member, unnamed bit-field, direct base, data member description,
 structured bindings - and type_of "Throws: meta::exception unless has-type(r)". So the kind gets no typed.
 Little practical need to reflect bindings (like locals); support is mainly for completeness.
 
-extract (probe: scratchpad extract_cases/, 2026-11-25): constant::extract<T>() returns meta_result<T> (via attempt) and
+extract (probe: scratchpad extract_cases/, 2026-11-25): constant::try_extract<T>() returns meta_result<T> (via attempt; extract<T>() unwraps) and
 is on value, object, annotation, enumerator, data_member, static_data_member, member_function,
 static_member_function, function, variable. GCC trunk: extract<int S::*>(data member), extract<R (S::*)(..) cv>(member
 function), extract<R (*)(..)>(function) work; a wrong type throws; extract<int&>(^^variable) throws, extract<int&>(
