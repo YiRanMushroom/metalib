@@ -1,0 +1,26 @@
+gcc/cp/reflect.cc: strip the BASELINK in eval_template_arguments_of
+
+A member function template named by a qualified name (^^S::mf) is a BASELINK.
+substitute keeps the BASELINK around the resulting specialization, and
+has_template_arguments / template_of strip it with MAYBE_BASELINK_FUNCTIONS,
+but template_arguments_of does not: get_template_innermost_arguments then
+returns null and gcc_assert (args) fails (internal compiler error).
+
+Reproducer:
+  #include <meta>
+  struct S { template<class T> void mf(T) {} };
+  consteval auto n() { return std::meta::template_arguments_of(substitute(^^S::mf, {^^int})).size(); }
+  static_assert(n() == 1);
+
+Against gcc-17-20261122.
+
+--- a/gcc/cp/reflect.cc
++++ b/gcc/cp/reflect.cc
+@@ -3921,6 +3921,7 @@
+   if (eval_has_template_arguments (r) != boolean_true_node)
+     return throw_exception_notargs (loc, ctx, fun, non_constant_p, jump_target);
+ 
++  r = MAYBE_BASELINK_FUNCTIONS (r);
+   vec<constructor_elt, va_gc> *elts = nullptr;
+   tree args = NULL_TREE;
+   if (TYPE_P (r) && typedef_variant_p (r))

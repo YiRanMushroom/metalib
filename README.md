@@ -156,8 +156,13 @@ Specializations have `template_()` and `template_arguments()`.
 - Annotations depend on where you ask: `annotations()` sees the declarations reachable from the point of the
   outermost constant evaluation. A parameter's annotations live on `function.parameters()[i]`, never on its type.
 - `^^S && x` parses as `^^(S&&)`; write `(^^S) && x`.
-- GCC trunk issues seen: `template_arguments_of` on a member function template specialization named by a qualified
-  name crashes the compiler (reach it through `members()`); an `extern "C"` function reports no parent.
+- GCC trunk (gcc-17-20261122) crashes (internal compiler error) on `template_arguments_of` of a member function
+  template specialization when the template was named by a qualified name: `substitute(^^S::mf, {^^int})`, then
+  `template_arguments()`. GCC represents the qualified member name as a `BASELINK` node and `substitute` keeps it;
+  `has_template_arguments` / `template_of` strip it, `template_arguments_of` does not, so an internal assertion
+  fails. Reach member templates through `members<mb::member_template>()` / `of_name` instead, or apply the one-line
+  fix in [patches/gcc-reflect-template-arguments-of-baselink.patch](patches/gcc-reflect-template-arguments-of-baselink.patch).
+- GCC trunk: an `extern "C"` function reports no parent.
 
 ## Building and testing
 
@@ -176,5 +181,6 @@ Tests (Catch2, fetched by CMake) live in `src/test`, one executable per file. Al
   `query.hpp`, `cache.hpp`, `message.hpp`, `encoding.hpp`, `metalib.hpp`.
 - `src/test/`: tests.
 - `docs/reference.md`: kinds, abilities and functions.
+- `patches/`: fixes for compiler bugs found while developing (GCC trunk).
 - `.agent-toolkit/index/entries/`: design notes and investigation results kept with the project (`status.md` is
   the current state).

@@ -35,4 +35,12 @@ What can be known:
   broken body is a hard error); class templates are not instantiated until is_complete_type / members_of; variable
   templates fail later at extract.
 - GCC ICE: template_arguments_of on a member function template specialization whose template was named by a
-  qualified name (^^S::mf) crashes (reflect.cc:3933); the same template reached via members_of worked.
+  qualified name (^^S::mf) hits gcc_assert (args) in eval_template_arguments_of (reflect.cc, gcc-17-20261122).
+  Cause (read from the source): a qualified member name is a BASELINK node; eval_substitute passes it to
+  lookup_template_function, so the result is still wrapped in a BASELINK. eval_has_template_arguments and
+  eval_template_of strip it with MAYBE_BASELINK_FUNCTIONS, eval_template_arguments_of does not, so
+  get_template_innermost_arguments sees the BASELINK and returns null. A template reached via members_of is the
+  bare TEMPLATE_DECL and works. Fix is one line (strip the BASELINK first): patches/gcc-reflect-template-arguments-of-baselink.patch.
+  Applied to this machine's C:/mingw64-gcc-trunk on 2026-11-25 (cc1plus.exe rebuilt in ~/wgcc/b/native/gcc,
+  23 s incremental; original kept as cc1plus.unpatched.exe); stock GCC trunk still crashes. Workaround without
+  the patch: get member templates through members() / of_name, not ^^S::mf.

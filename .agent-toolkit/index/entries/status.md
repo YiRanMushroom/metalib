@@ -25,6 +25,11 @@ title = "Status"
   ~/wgcc/tools, ~/wgcc/nsys/mingw symlink, wipe stale target config.cache), overlaid on the MinGW-Builds 16.2 tree.
 - WSL Ubuntu-22.04: ~/opt/gcc-trunk-20261124, ~/opt/cmake-4.5.1-linux-x86_64, ~/opt/ninja-v1.13.2; Catch2 discovery
   needs XDG_RUNTIME_DIR=/tmp. C:/mingw64-gcc-16.2 and 16.1 kept for comparison.
+- C:/mingw64-gcc-trunk/libexec/gcc/x86_64-w64-mingw32/17.0.0/cc1plus.exe is patched (2026-11-25) with
+  patches/gcc-reflect-template-arguments-of-baselink.patch (template_arguments_of ICE on ^^S::mf specializations);
+  the stock binary is cc1plus.unpatched.exe next to it. Rebuild after editing ~/wgcc/src/gcc-17-20261122:
+  PATH=~/wgcc/tools/bin:~/wgcc/cross/bin:$PATH make -C ~/wgcc/b/native/gcc -j10 cc1plus.exe, then copy cc1plus.exe.
+  Verified with the patched compiler: clean rebuild + ctest 16/16, the ICE reproducer compiles.
 - Windows scheduled task metalib-gcc-trunk (one-time build helper) still exists; delete with
   Unregister-ScheduledTask metalib-gcc-trunk.
 
