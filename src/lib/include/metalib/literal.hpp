@@ -8,6 +8,7 @@
 #include <span>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 namespace metalib {
     template<typename T>
@@ -21,7 +22,14 @@ namespace metalib {
             requires (!std::same_as<std::remove_cvref_t<R>, array_literal>)
                      && std::convertible_to<std::ranges::range_reference_t<R>, T>
         consteval array_literal(R &&range) {
-            std::span<T const> array = std::define_static_array(range);
+            std::span<T const> array;
+            if constexpr (std::same_as<std::ranges::range_value_t<R>, T>) {
+                array = std::define_static_array(range);
+            } else {
+                array = std::define_static_array(range | std::views::transform([](auto &&element) -> T {
+                    return static_cast<T>(std::forward<decltype(element)>(element));
+                }));
+            }
             pointer = array.data();
             length = array.size();
         }

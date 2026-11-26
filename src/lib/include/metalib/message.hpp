@@ -1,6 +1,8 @@
 #pragma once
 
+#include <charconv>
 #include <concepts>
+#include <limits>
 #include <meta>
 #include <metalib/handle.hpp>
 #include <string>
@@ -26,19 +28,8 @@ namespace metalib {
             } else if constexpr (std::same_as<T, char>) {
                 out += part;
             } else if constexpr (std::integral<T>) {
-                std::string digits;
-                auto magnitude = static_cast<std::make_unsigned_t<T>>(part);
-                if constexpr (std::is_signed_v<T>) {
-                    if (part < 0) {
-                        out += '-';
-                        magnitude = static_cast<std::make_unsigned_t<T>>(0) - magnitude;
-                    }
-                }
-                do {
-                    digits.insert(digits.begin(), static_cast<char>('0' + magnitude % 10));
-                    magnitude /= 10;
-                } while (magnitude != 0);
-                out += digits;
+                char digits[std::numeric_limits<T>::digits10 + 3]{};
+                out.append(digits, std::to_chars(digits, digits + sizeof digits, part).ptr);
             } else {
                 out += std::string_view(part);
             }

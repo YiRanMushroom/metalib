@@ -320,17 +320,14 @@ namespace metalib {
 
         template<typename H = handle>
         consteval array_literal<H> static_handles(std::vector<std::meta::info> const &infos) {
-            std::vector<H> handles;
-            for (std::meta::info i: infos) {
-                handles.push_back(H{i});
-            }
-            return array_literal<H>(handles);
+            return array_literal<H>(infos | std::views::transform([](std::meta::info r) { return H{r}; }));
         }
 
         template<typename T>
         consteval std::vector<std::meta::info> infos_of(std::vector<T> const &handles) {
             std::vector<std::meta::info> infos;
-            for (auto const &h: handles) {
+            infos.reserve(handles.size());
+            for (T const &h: handles) {
                 infos.push_back(h.info);
             }
             return infos;
@@ -346,6 +343,7 @@ namespace metalib {
         consteval auto select(std::vector<std::meta::info> const &infos, Filter filter, Map map) {
             using result = std::remove_cvref_t<std::invoke_result_t<Map &, Element>>;
             std::vector<result> selected;
+            selected.reserve(infos.size());
             for (std::meta::info r: infos) {
                 Element element{r};
                 if (std::invoke(filter, element)) {
@@ -1654,10 +1652,10 @@ namespace metalib {
 
     consteval meta_result<destructor> ability::record::destructor(this handle const &self,
                                                                   std::meta::access_context ctx) {
-        for (std::meta::info r: std::meta::members_of(std::meta::dealias(self.info), ctx)) {
-            if (std::meta::is_destructor(r)) {
-                return metalib::destructor{r};
-            }
+        std::vector<std::meta::info> members = std::meta::members_of(std::meta::dealias(self.info), ctx);
+        auto found = std::ranges::find_if(members, [](std::meta::info r) { return std::meta::is_destructor(r); });
+        if (found != members.end()) {
+            return metalib::destructor{*found};
         }
         return meta_result<metalib::destructor>::failure(u8"no destructor among the members in this access context",
                                                          self.info);
@@ -1698,15 +1696,15 @@ namespace metalib {
 
     consteval meta_result<type> ability::type_transforms::common_type_with(this handle const &self,
                                                                            std::vector<type> const &others) {
-        std::vector<std::meta::info> types = details::infos_of(others);
-        types.insert(types.begin(), self.info);
+        std::vector<std::meta::info> types{self.info};
+        types.append_range(details::infos_of(others));
         return details::attempt<type>([&] { return type{std::meta::common_type(types)}; });
     }
 
     consteval meta_result<type> ability::type_transforms::common_reference_with(this handle const &self,
         std::vector<type> const &others) {
-        std::vector<std::meta::info> types = details::infos_of(others);
-        types.insert(types.begin(), self.info);
+        std::vector<std::meta::info> types{self.info};
+        types.append_range(details::infos_of(others));
         return details::attempt<type>([&] { return type{std::meta::common_reference(types)}; });
     }
 

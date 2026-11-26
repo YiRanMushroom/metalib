@@ -6,7 +6,7 @@ template<typename T, int N = 3> struct CT { T value[N]; };
 template<typename T> T twice(T x) { return x + x; }
 template<typename T> constexpr T zero = T{};
 template<typename T> using ptr = T *;
-template<typename T> concept small = sizeof(T) <= 4;
+template<typename T> concept small = sizeof(T) == 1;
 struct S {
     template<typename T> void mf(T) {}
     template<typename T> bool operator==(T const &) const { return true; }
@@ -27,7 +27,7 @@ constexpr auto tw = mb::template_{^^twice}.substitute({mb::type{^^long}}).unwrap
 static_assert(tw.return_type() == mb::type{^^long} && tw.template_().unwrap() == mb::template_{^^twice});
 static_assert(mb::template_{^^zero}.substitute({mb::type{^^int}}).unwrap().try_into<mb::variable>().unwrap().template_arguments().unwrap().size() == 1);
 static_assert(mb::template_{^^ptr}.substitute({mb::type{^^int}}).unwrap().try_into<mb::type>().unwrap() == mb::type{^^int *});
-static_assert(mb::template_{^^small}.is_concept() && mb::template_{^^small}.substitute({mb::type{^^int}}).unwrap().try_into<mb::value>().unwrap().extract<bool>().unwrap());
+static_assert(mb::template_{^^small}.is_concept() && mb::template_{^^small}.substitute({mb::type{^^char}}).unwrap().try_into<mb::value>().unwrap().extract<bool>().unwrap());
 // member templates
 constexpr auto mts = mb::class_type{^^S}.members<mb::member_template>(ctx);
 static_assert(mts.size() == 3 && mts[0].is_function_template() && mts[0].is_public());

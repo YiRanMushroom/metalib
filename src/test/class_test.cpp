@@ -166,6 +166,12 @@ static_assert(al.size() == 3 && al[2] == 3 && std::span<int const>(al).size() ==
 template<mb::array_literal<int> A> constexpr int first = A[0];
 static_assert(first<al> == 1);
 constexpr mb::u8string_literal u8 = u8"ü";
+consteval std::size_t converted_size() {
+    std::vector<std::string_view> views{"a", "bc"};
+    mb::array_literal<mb::string_literal> converted = views;
+    return converted[1].size();
+}
+static_assert(converted_size() == 2);
 static_assert(u8.size() == 2);
 
 TEST_CASE("class queries: results usable at runtime") {

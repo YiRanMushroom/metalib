@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <metalib/metalib.hpp>
+#include <string>
+#include <string_view>
 #include <type_traits>
 namespace mb = metalib;
 using mb::cache::access;
@@ -31,14 +33,14 @@ static_assert(mb::cache::enumerators<mb::enum_type{^^color}>[1].ascii_identifier
 static_assert(mb::cache::parameters<mb::cache::members<cs, mb::member_function>[0]>.size() == 2);
 static_assert(mb::cache::template_arguments<mb::class_type{^^box<int>}>.unwrap().size() == 2);
 // cached results work in expansion statements
-consteval int sum_offsets() {
-    int total = 0;
+consteval std::string_view names() {
+    std::string joined;
     template for (constexpr mb::data_member m : mb::cache::members<cs, mb::data_member>) {
-        total += static_cast<int>(m.offset().bytes);
+        joined += m.ascii_identifier().unwrap().view();
     }
-    return total;
+    return std::define_static_string(joined);
 }
-static_assert(sum_offsets() == static_cast<int>(sizeof(int) + sizeof(int) + sizeof(int)));
+static_assert(names() == "ac");
 TEST_CASE("cache: compile-time checks") {
     SUCCEED("all checks are static_asserts");
 }

@@ -42,4 +42,6 @@ title = "Status"
   an expression designating one function to reflect_function (e.g. through a cast to the function pointer type).
 - Measured 2026-11-25 (GCC trunk, -fsyntax-only): <meta> alone 1.0 s, + metalib.hpp 1.6 s (parsing 84%, constant
   evaluation ~0.24 s). CLion's analysis is the slow part (60-280 s per test file, often times out).
+- Code review pass 2026-11-25: std algorithms / views where they pay off (measured, see [[build.compile-cost]]),
+  array_literal accepts ranges whose element type only converts to T, layout-independent tests.
 - Clang support once clang adopts P4101.
