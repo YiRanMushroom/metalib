@@ -60,5 +60,17 @@ Measured (GCC trunk, -fsyntax-only, 300 distinct variables)
 - A static_assert message that is not a constant variable is re-evaluated per character by GCC: build it once with
   std::define_static_string, or a long message takes minutes and gigabytes.
 
-Open (discussed, not decided): arranging the abilities in nested namespaces with one check per namespace so that
-whole groups are skipped; typed_as for variables and enumerators too.
+Proposed by the user, not implemented (2026-11-26): a tree of namespaces as the registry, wanted because it documents
+which abilities belong together, not for speed. Probed on GCC trunk (probe not kept), all of it compiles:
+- members_of(namespace) lists nested namespaces, namespace aliases, type aliases, alias templates and functions, and
+  a function in a namespace can carry an annotation.
+- Collector: one function template per namespace (template for over its members); a marked `check` function is the
+  gate; a type alias is an ability, tried with its own check; a namespace or namespace alias is entered through
+  dealias; an alias template with one std::meta::info parameter is tried with can_substitute, its requires-clause being
+  the check (this gave typed_as<int> for a value). A visited vector stops cycles and repeated blocks; an ability
+  reached twice is kept once; the visiting order does not matter because the result is sorted.
+- `collect_abilities<R, Root>` with the root namespace as a template argument works, so users could compose their
+  own root (aliasing the built-in one) instead of declaring abilities inside metalib::ability.
+- Constraint that stays: make_reflection / holds / the get_members filter call an ability's own check with no
+  namespace context, so every check must stay complete; a gate may only repeat what the checks inside already imply.
+

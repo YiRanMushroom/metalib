@@ -87,10 +87,13 @@ title = "Status"
   argument); except<Set, A...> and K::without_ability<A...>; reflect_constant returns typed_constant or typed_object by
   the argument type, reflect_object typed_object, reflect_constant_string / _array object;
   get_annotations_with_type<T>(). See [[design.misc-queries]]. CLion evaluator bugs reported, see [[build.cmake-setup]].
-- Done 2026-11-26 (uncommitted): mb::reflect<^^x> deduces the kind (reflect.hpp, [[design.kind-deduction]]); the
-  former reflect<K>(r) / try_reflect<K>(r) are make_reflection<K>(r) / try_make_reflection<K>(r); every ability has a
-  check and the [[=auto_ability]] mark; member and namespace_member lost annotatable; tests use reflect<^^x> at literal
-  sites; new reflect_test.cpp.
-- Waiting for the user: whether to arrange abilities in nested namespaces with a check per namespace (measured gain is
-  small, see [[design.kind-deduction]]); commit and push of the work above.
+- Done 2026-11-26 (commit 7b83d5d, pushed): mb::reflect<^^x> deduces the kind (reflect.hpp, [[design.kind-deduction]]);
+  the former reflect<K>(r) / try_reflect<K>(r) are make_reflection<K>(r) / try_make_reflection<K>(r); every ability
+  has a check and the [[=auto_ability]] mark; member and namespace_member lost annotatable; tests use reflect<^^x> at
+  literal sites; new reflect_test.cpp. Full build + ctest 17/17.
+- Under discussion with the user (wanted for structure, not speed): describe which abilities are tried as a tree of
+  namespaces (a marked check function per namespace, type aliases to the abilities, namespace aliases to reuse a
+  block, alias templates taking std::meta::info for parametrised abilities), reflect<R> =
+  collect_abilities<R, root>. A probe of this compiles on GCC trunk; nothing is implemented, see
+  [[design.kind-deduction]].
 - Clang support once clang adopts P4101.
