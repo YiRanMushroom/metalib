@@ -63,7 +63,6 @@ something computed, `make_` for something constructed. An operation that cannot 
 | `make_reflection<K>(r)` | `K`: `try_make_reflection<K>(r).unwrap()` |
 | `h.try_into<K>()`, `K::try_from(h)` | `meta_result<K>`, failing with the first unmet requirement |
 | `h.into<K>()`, `K::from(h)` | `K`: `h.try_into<K>().unwrap()` |
-| `result.try_into<K>()`, `result.into<K>()` | the same on a `meta_result` holding a handle; a failed `result` keeps its error |
 | `k.try_attach_ability<A...>()`, `k.attach_ability<A...>()` | `meta_result<K::with_ability<A...>>` / `K::with_ability<A...>`: more abilities on the same reflection |
 | `K::without_ability<A...>`, `except<Set, A...>` | the kind / ability set without those abilities |
 | `K::holds(r)` | `bool` |
@@ -485,7 +484,7 @@ hard compile error, not a failure.
 | Member | Meaning |
 |---|---|
 | `u8message()`, `message()` | the message (`message()` is ASCII) |
-| `u8action()` | the failed `std::meta` call with its operands, e.g. `extract<long int*>()`; empty otherwise |
+| `u8action()` | the failed call with its operands, e.g. `extract<long int*>()` or `get_size()`; empty otherwise |
 | `from()`, `where()` | the reflection and the source location |
 | `throw_()` | throws `meta_exception(*this)` |
 
@@ -493,19 +492,19 @@ hard compile error, not a failure.
 `error().throw_()` on failure. The plain form of a pair (`get_parent()`) is its `try_` form followed by `unwrap()`
 (`try_get_parent().unwrap()`), so both give the same message. Every message names the reflection by its display string.
 Kind checks read "reflection '<display>' is not <requirement>"; preconditions a query checks itself read like
-"reflection '<display>' has no parent" or "type '<display>' is not tuple-like"; failed `std::meta` calls read
-`unable to <verb> <call> <preposition> '<display string>'` (plus ` of type '<type>'` when the reflection has a type);
-`u8action()` is the call:
+"reflection '<display>' has no parent" or "type '<display>' is not tuple-like"; failed operations read
+`unable to <call> <preposition> '<display string>'` (plus ` of type '<type>'` when the reflection has a type), where
+`<call>` is the name of the failed function with its operands; `u8action()` is that call:
 
 | Operation | Message |
 |---|---|
 | `extract<T>()` | `unable to extract<T>() from 'r'` |
 | `substitute(args)` | `unable to substitute(args) into '<template head>'` |
-| `find_common_type_with(ts)`, `find_common_reference_with(ts)`, `find_invoke_result_with(ts)` | `unable to find common_type_with(ts) from 't'` (and so on) |
-| `get_variable()`, `get_object()` | `unable to get variable() from 'r'` (and so on) |
-| `get_size()`, `get_type()`, `get_alignment()`, `get_return_type()`, `get_enumerators()`, `get_offset()` of a base | `unable to get size() from 'r'` (and so on) |
-| `make_data_member_spec(t, options)` | `unable to make data_member_spec() from 't'` |
-| `define_aggregate(t, specs)` | `unable to apply define_aggregate(specs) to 't'` |
+| `find_common_type_with(ts)`, `find_common_reference_with(ts)`, `find_invoke_result_with(ts)` | `unable to find_common_type_with(ts) from 't'` (and so on) |
+| `get_variable()`, `get_object()` | `unable to get_variable() from 'r'` (and so on) |
+| `get_size()`, `get_type()`, `get_alignment()`, `get_return_type()`, `get_enumerators()`, `get_offset()` of a base | `unable to get_size() from 'r'` (and so on) |
+| `make_data_member_spec(t, options)` | `unable to make_data_member_spec() from 't'` |
+| `define_aggregate(t, specs)` | `unable to define_aggregate(specs) for 't'` |
 
 ## Literals (literal.hpp)
 
@@ -516,21 +515,89 @@ Kind checks read "reflection '<display>' is not <requirement>"; preconditions a 
 - `string_literal` / `u8string_literal`: structural null-terminated strings over `define_static_string`;
   convert to `std::string_view` / `std::u8string_view`, compare with string views.
 
-## Named module
+## Named modules: `metalib::codegen`
 
-| Name | Meaning |
+The marks are in `<metalib/codegen/marks.hpp>` (always included). The generator is in
+`<metalib/codegen/module_interface.hpp>`, which `metalib.hpp` includes only when `METALIB_CODEGEN` is defined (it
+would cost every other include about 20M); as a module it is `metalib.codegen`.
+
+| Name (in `metalib::codegen`) | Meaning |
 |---|---|
-| `exported`, `exported(false)` (`<metalib/exported.hpp>`) | annotation values: `[[=metalib::exported]]` marks an entity, or a namespace with everything in it, for the generated module; `[[=metalib::exported(false)]]` excludes one. The nearest mark decides: the entity's own, else that of the closest enclosing namespace. |
-| `metalib::module` (CMake target, `METALIB_BUILD_MODULE`) | the module `metalib`, linking `metalib::metalib` publicly |
+| `exported`, `exported(false)` | annotation values: `[[=exported]]` marks an entity, or a namespace with everything in it, for export; `[[=exported(false)]]` excludes one. The nearest mark decides: the entity's own, else that of the closest enclosing namespace. |
+| `export_module_name(name, place = append)` | annotation of a namespace: it and the namespaces in it go into a module. `export_module_name::append`: the module is `<module of the enclosing namespace>.<name>`; without an enclosing module the name is used as it is. `export_module_name::as_root`: the module is `name` as given. Namespaces that give the same name share one module. |
+| `inlined` | annotation of an inline namespace (reflection cannot tell an inline namespace from a plain one): its export block is opened as `namespace a::inline b`. The outermost namespace of a nested name is written without `inline`. |
+| `inject{.at, .content, .propagate}` | annotation of a namespace or of a namespace-scope variable: `content` is written into the interface. `.at`: `inject::at_front` (before the module declaration), `inject::before_exports` (after the module declaration and the re-exports, before the export blocks: imports go here), `inject::in_place` (in the export block of the namespace; for a variable, at its position), `inject::at_back` (at the end). `.propagate`: `inject::none` (the module of that namespace only), `inject::down` (also the modules below it by name: `a.b` is below `a`), `inject::up` (also the modules above it). A variable carrying `inject` is not exported. |
+| `module_generator` | `module_generator().append_namespace(ns).append_namespace(other).build()`: `append_namespace` takes a `namespace_` whose tree is to be exported, `build()` returns `std::vector<virtual_file>`, one interface for every module. `virtual_file` is `{string_literal path; string_literal text;}`; the path is the module name with its dots as directories: `a.b` is `a/b.cppm` |
+| `write_directory(files, root)` | at run time: writes each file under the directory `root`; false when one cannot be written |
+| `metalib::module` (CMake target, `METALIB_BUILD_MODULE`) | the modules `metalib.core`, `metalib.reflect`, `metalib.codegen` and `metalib`, which re-exports the three; links `metalib::metalib` publicly |
 
-`metalib.cppm` is written at configure time by `src/lib/module/generate_module.cpp` and again when a header changes.
-For each namespace it holds `export namespace N { using ::N::name; ... }`, with namespace aliases declared again. A
-template cannot carry a mark of its own (its annotations cannot be queried), so templates are exported through the
-mark of their namespace. Names beginning with two underscores and entities without a name are left out.
+Each interface is
 
-`metalib::builtin` is not exported. `members_of` in an importing file sees only exported declarations, but
-`builtin_auto_ability_registry` was built in the header, where the namespaces are declared, so importers use its
-value and `reflect<R>` works through the module, as does a registry of the importer's own that holds it. The
-interface also ends with a function that names `details::collected_kind<builtin_auto_ability_registry>`, so that
-the collector is instantiated once in the module and not in every importer.
+```text
+module;
+<every at_front content that reaches this module>
+export module <name>;
+export import <each module one level below by name>;
+<every before_exports content that reaches this module>
+export namespace N { using ::N::name; ... }      (one block for each namespace with something exported;
+                                                  namespace N::inline V for one marked inlined)
+<every at_back content that reaches this module>
+```
 
+A namespace alias is declared again in its block (`namespace a = ::target;`). A template cannot carry a mark of its
+own (its annotations cannot be queried), so templates are exported through the mark of their namespace. Names
+beginning with two underscores and entities without a name are left out. Each injected text outside a block is
+preceded by a comment naming where it comes from. A namespace given to `append_namespace` must carry
+`export_module_name`.
+
+The modules form a tree by their names, not by the namespaces: `a` re-exports `a.b` and `a.c`, whichever
+namespaces they come from, and a name no namespace gives (`a.b` when only `a.b.c` exists) becomes a module that
+only re-exports.
+
+The headers describe the modules, so a generator names only the namespace and the output directory:
+
+```cpp
+// src/lib/module/generate_module.cpp, compiled with -DMETALIB_CODEGEN and run when the project is configured
+constexpr auto module_interfaces = std::define_static_array(
+    metalib::codegen::module_generator().append_namespace(metalib::reflect<^^metalib>).build());
+int main(int, char **argv) { return metalib::codegen::write_directory(module_interfaces, argv[1]) ? 0 : 1; }
+```
+
+`src/test/codegen_test.cpp` shows two namespace trees with appended modules, an independent one, a module two
+namespaces share, one that only re-exports, inline namespaces, an alias and the positions.
+
+### The modules of metalib
+
+| Module | Namespace that names it | Its interface includes |
+|---|---|---|
+| `metalib` | `metalib`, `export_module_name("metalib")` | nothing: no declaration is directly in `metalib`; it re-exports the three below |
+| `metalib.core` | the inline namespace `metalib::core`, `export_module_name("core")` | `<metalib/core.hpp>`: kinds, abilities, results, literals, queries, cache, messages |
+| `metalib.reflect` | the inline namespace `metalib::reflection`, `export_module_name("reflect")` | `<metalib/reflect.hpp>`: `reflect<R>` and ability registries |
+| `metalib.codegen` | the inline namespace `metalib::codegen::generation`, `export_module_name("codegen")` | `<metalib/codegen/module_interface.hpp>`: the marks, `module_generator`, `virtual_file`, `write_directory` |
+
+Each name is appended to the module of the enclosing namespace, `metalib`. The namespaces are inline, so the names
+stay `metalib::class_type`, `metalib::reflect`, `metalib::codegen::module_generator` (the compiler's own messages
+spell the full name, `metalib::core::class_type`). Each interface includes its header before the module declaration
+and exports the names of its own namespace only: `metalib.reflect` exports `reflect` and the registry names, not
+the kinds, which are in `metalib.core`; the marks are in `metalib.codegen`. The `details` namespaces and
+`metalib::builtin` are not exported.
+
+The three interfaces contain the same core declarations, which the compiler treats as one when a file imports
+several of them. GCC trunk needs `patches/gcc-reflect-splice-scope-comptypes.patch` for this: without it the alias
+templates whose target is a splice (`except`, `with_ability`, `without_ability`) are rejected with "conflicting
+imported declaration". `patches/Dockerfile` builds a compiler with the patches applied.
+
+A module that includes a header must not also import a module that includes the same header (GCC: "mangling ...
+conflicts with a previous mangle" for declarations of the standard library); this is why `metalib.reflect` does
+not re-export `metalib.core`. In a file of your own, likewise, do not mix `import` of these modules with an
+`#include` of their headers.
+
+`members_of` in an importing file sees only exported declarations, but `builtin_auto_ability_registry` is built in
+the module, where the namespaces are declared, so importers use its value and `reflect<R>` works, as does a registry
+of the importer's own that holds it. `reflect.hpp` injects, with `inject::at_back`, an explicit instantiation of
+`reflect_details::collected_kind<builtin_auto_ability_registry>`, so that the collector is instantiated once, in the
+module, and not in every importer.
+
+An importing file includes `<meta>` itself: GCC implements the `std::meta` functions by looking up `std::vector`,
+`std::ranges` and other names in the file being compiled, which fails ("couldn't look up 'std::vector'") when
+nothing there declares them.

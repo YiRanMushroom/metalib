@@ -49,7 +49,7 @@ Built registries (the user's design, 2026-11-26; replaced lazy scanning and the 
 - collect_abilities<R, Registry> takes only a built registry; a namespace is an error ("'x' is not an ability
   registry made by build_registry_from_namespace").
 - Composition: a namespace entry that is a `constexpr std::meta::info` variable holding a built registry is entered
-  like a nested namespace. This is how a user root contains the built-in one, also through the module (module_test);
+  like a nested namespace. This is how a user registry contains the built-in one, also through the module (module_test);
   `namespace builtin = metalib::builtin::auto_ability_root;` still works with the header.
 - A namespace without entries is an error of the build ("ability registry 'x' has no entries").
 - Trap: `^^std::meta::info` reflects the alias; compare a type with `dealias(^^std::meta::info)`.
@@ -59,9 +59,9 @@ Built registries (the user's design, 2026-11-26; replaced lazy scanning and the 
   (the user's observation, stated in docs/reference.md "Declaring and building a registry").
 
 Implementation notes (measured on GCC trunk)
-- collect_from<Registry, Root> is one function template per namespace; the template for over its members is expanded
-  once per translation unit. Each type entry knows at compile time its index in registered_abilities<Root> (all
-  abilities of the root, sorted once with type_less) and sets a flag; the kind is the flagged abilities in that order,
+- collect_from<Part, Registry> is one function template per namespace; the template for over its members is expanded
+  once per translation unit. Each type entry knows at compile time its index in registered_abilities<Registry> (all
+  abilities of the registry, sorted once with type_less) and sets a flag; the kind is the flagged abilities in that order,
   so nothing is sorted per reflection. Only a result with substituted (alias template) entries goes through
   canonical_interface.
 - Costs for 300 distinct variables, -fsyntax-only: no reflection 228M; make_reflection<mb::variable> 245M;

@@ -6,7 +6,7 @@
 #include <metalib/literal.hpp>
 #include <utility>
 
-namespace metalib {
+namespace metalib::inline core {
     template<typename F>
     struct basic_predicate;
 

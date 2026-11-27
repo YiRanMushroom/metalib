@@ -41,11 +41,22 @@ Code: [[src/lib/include/metalib/handle.hpp]] (details::static_handles, details::
   specialization nothing exported refers to is dropped; in the header that function costs every textual include +39M.
   (b) Build the registry in a non-template constexpr variable in the header ([[design.kind-deduction]]): its
   initializer is evaluated at the definition, importers use the value, and a registry of the importer's own can hold
-  it. With (b) alone the collector is instantiated in every importer: 198M for the 30-reflection file. The library
-  does both: (b) for correctness, (a) in the generated interface for speed (147M).
-  Also tried: a record class completed by define_aggregate in a consteval block; class members are found through
-  reachability, not export, so it worked on GCC, but whether the injected class in the global module fragment is
-  reachable for importers could not be settled from the standard's text. Dropped for (b).
+  it. With (b) alone the collector is instantiated in every importer: 197M / 1.4 s for the 30-reflection file, of
+  which 39M is constant evaluation done once per translation unit (entry lists per registry node, the sorted ability
+  list, each entry's index); a single reflect<^^x> is cheap (30 of them: 5M).
+  What keeps that instantiation in the module for importers (probed 2026-11-26, all 147M / 1.1 s): a non-template
+  function naming the specialization, or an explicit instantiation
+  `template std::meta::info metalib::reflection::reflect_details::collected_kind<...>(std::meta::info);`,
+  in the purview or in the header. What does not (197M): a consteval block calling it, in the header or in the
+  purview: nothing that stays refers to the specialization, so it is not written to the module.
+  The module gets the explicit instantiation in its purview, through an inject at_back annotation in reflect.hpp
+  ([[build.cmake-setup]]). In the header it would cost every textual include that never uses reflect +49M
+  (238M -> 287M), and an explicit instantiation definition may appear only once in a program.
+  Split into metalib.core / metalib.reflect / metalib.codegen under metalib (2026-11-26, [[build.cmake-setup]]),
+  each interface including its headers (current): import metalib 266M, import metalib.core + metalib.reflect 193M,
+  import metalib.core alone 134M; textual include 301M. Three BMIs each hold the core (12M, 12M, 17M on disk) and the
+  importer merges them, which is where the gain over the include goes. Submodules importing the core instead
+  (dropped): 224M / 163M. One module holding everything: 182M with the generator in it, 147M without.
 - The importer must still provide the std declarations itself ("'std::ranges' is not a namespace" otherwise).
 - `export module metalib; export import <metalib/metalib.hpp>;` works and costs the same as the header unit: it gives
   `import metalib;` without generating anything, but exports everything the header declares.

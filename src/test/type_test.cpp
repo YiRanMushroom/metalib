@@ -20,7 +20,7 @@ auto undeduced();
 static_assert(!mb::reflect<^^Incomplete>.try_get_size().has_value() &&
               !mb::reflect<^^Incomplete>.try_get_alignment().has_value());
 static_assert(mb::reflect<^^Incomplete>.try_get_size().error().u8message() ==
-              u8"unable to get size() from '" + std::u8string(std::meta::u8display_string_of(^^Incomplete)) + u8"'");
+              u8"unable to get_size() from '" + std::u8string(std::meta::u8display_string_of(^^Incomplete)) + u8"'");
 static_assert(!mb::reflect<^^undeduced>.try_get_type().has_value() &&
               !mb::reflect<^^undeduced>.try_get_return_type().has_value());
 static_assert(s.is_class() && s.is_aggregate() && s.is_trivially_copyable() && !i.is_class());

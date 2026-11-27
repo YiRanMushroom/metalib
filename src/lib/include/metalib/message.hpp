@@ -8,7 +8,7 @@
 #include <string>
 #include <string_view>
 
-namespace metalib {
+namespace metalib::inline core {
     consteval std::string to_string(handle const &h) {
         return std::string(std::meta::display_string_of(h.info));
     }

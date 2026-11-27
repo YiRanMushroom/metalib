@@ -5,8 +5,9 @@ title = "Status"
 ## Where it stands (2026-11-26)
 - Library complete for the basic reflection API: every std::meta query is wrapped (the only ones not wrapped are
   access_context members scope/via/designating_class, std::meta::exception members, std::is_string_literal).
-  Code: src/lib/include/metalib/ (handle.hpp, reflect.hpp, meta_result.hpp, literal.hpp, query.hpp, encoding.hpp,
-  metalib.hpp).
+  Code: src/lib/include/metalib/ (handle.hpp, reflect.hpp, meta_result.hpp, literal.hpp, query.hpp, cache.hpp,
+  message.hpp, encoding.hpp, codegen/marks.hpp, core.hpp = all of these; metalib.hpp = core.hpp + reflect.hpp, plus
+  codegen/module_interface.hpp under METALIB_CODEGEN); src/lib/module/generate_module.cpp (the main that writes the named module's interface).
   enum.hpp (old sample) was removed.
 - Design: [[design.flat-abilities]] (kinds = ability sets, layout of handle.hpp, untyped parent, naming),
   [[design.class-types]], [[design.namespaces]], [[design.misc-queries]], [[design.templates]],
@@ -15,8 +16,9 @@ title = "Status"
 - User docs: README.md and docs/reference.md (written against handle.hpp; edit them when kinds/abilities change).
 
 ## Verified
-- GCC trunk (C:/mingw64-gcc-trunk, gcc-17-20261122) on Windows: CMake build + ctest 18/18 (src/test, one executable
-  per file, mostly static_asserts; identifier_test also built with METALIB_HAS_META_EXCEPTION=0), 2026-11-26.
+- GCC trunk (C:/mingw64-gcc-trunk, gcc-17-20261122) on Windows: CMake build + ctest (src/test, one executable
+  per file, mostly static_asserts; identifier_test also built with METALIB_HAS_META_EXCEPTION=0), 2026-11-26;
+  19/19 with codegen_test the same evening, and again at night with the module split and the splice patch.
 - Not verified: any clang (clang-p2996 still uses the old consteval-only type model and is expected to reject parts),
   GCC 16.x (rejects meta_result with info), compile-time cost on large code.
 
@@ -52,15 +54,17 @@ title = "Status"
   see [[build.compile-cost]] (2026-11-25).
 - Errors (2026-11-26, decided with the user): meta_result holds a metalib::meta_error (plain value: message, action,
   from, where; throw_() throws meta_exception, which carries the meta_error). std::meta::exception is only caught,
-  never rethrown or wrapped; failed operations say "unable to <verb> <call(operands)> <preposition> '<display string>' [of type 'T']",
-  e.g. "unable to find common_type_with(A) from 'int'" (details::unable / call_of / template_call_of / attempt(f,
+  never rethrown or wrapped; failed operations say "unable to <call(operands)> <preposition> '<display string>' [of type 'T']",
+  where the call is the current function name, e.g. "unable to find_common_type_with(A) from 'int'", "unable to
+  get_size() from 'S'" (since 2026-11-26 evening; details::unable / call_of / template_call_of / attempt(f,
   describe); the message is built only on failure; type_if_any catches type_of's exception).
   meta_result: std::expected-style U&& constructor (forwarding, excludes meta_result / meta_error), unwrap() and
   unwrap_or(T) take an explicit object parameter so rvalue results move out; meta_result<T&> keeps working. Rejected: wrapping
   std::meta::exception (its message carries no reason; GCC substitutes with tf_none).
 - Narrowing shortcuts (2026-11-26, user request): try_make_reflection<K>(info) -> meta_result<K>, make_reflection<K>(info) -> K
   (named try_reflect / reflect until the same evening);
-  h.into<K>() = try_into + unwrap; meta_result<handle kind> has try_into<K>() (keeps the original error) and into<K>().
+  h.into<K>() = try_into + unwrap. meta_result has no try_into / into (removed 2026-11-26 at the user's request:
+  narrowing belongs to handles; write result.unwrap().try_into<K>()).
 - Done 2026-11-26 : kind constructor private + friend details::reflect_unchecked, public K{r} checked
   (bench_params constant evaluation 119M -> 135M from the per-construction check; include-only unchanged); review of
   four read-only agents applied: meta_result constructor excludes other meta_results and temporaries for reference T,
@@ -96,12 +100,36 @@ title = "Status"
   namespace aliases for shared blocks, an alias template for typed_as); reflect<R> =
   collect_abilities<R, builtin_auto_ability_registry>; the [[=auto_ability]] class mark is gone; users extend with a
   root of their own. Full build + ctest 17/17. See [[design.kind-deduction]].
-- Done 2026-11-26 (commit 1e919d9, pushed; export review in the commit after it): named module. `[[=metalib::exported]]` marks (exported.hpp), generator
+- Done 2026-11-26 (evening and night, pushed together with this note): error messages name the current functions; meta_result lost try_into /
+  into; metalib::codegen (marks exported / export_module_name / inject on namespaces; module_generator with
+  append_namespace / build -> virtual files, write_directory; module tree by names; marks exported,
+  export_module_name, inlined, inject); the library is four modules: metalib (namespace metalib, re-exports only) and
+  metalib.core / metalib.reflect / metalib.codegen appended by the inline namespaces metalib::core,
+  metalib::reflection, metalib::codegen::generation, each including its own header ([[build.cmake-setup]]; needs the
+  splice patch); every core header now opens namespace metalib::inline core;
+  core.hpp is new. Full build + ctest 19/19 (new codegen_test).
+- GCC trunk cannot merge splice alias templates that reach a file through two modules ([[build.cmake-setup]]).
+  patches/gcc-reflect-splice-scope-comptypes.patch fixes it (SET_TYPE_STRUCTURAL_EQUALITY in make_splice_scope,
+  reflect.cc; a SPLICE_SCOPE case in structural_comptypes, typeck.cc) and is INSTALLED since 2026-11-26 night:
+  C:/mingw64-gcc-trunk/libexec/gcc/x86_64-w64-mingw32/17.0.0/cc1plus.exe has both patches; cc1plus.before-splice.exe
+  next to it has only the first, cc1plus.unpatched.exe none. Verified with it: full build + ctest 19/19. Patch
+  testing beyond that: reproductions pass, three different-alias cases still rejected, 240 of 241 g++.dg/reflect
+  splice tests identical (diag2.C: wording becomes "redeclaration of"); not run: DejaGnu, a checking build.
+  The WSL source tree has the edit (backups *.before-splice). Not fixed: unify (pt.cc) has no SPLICE_SCOPE case (ICE
+  on a partial specialization over typename [: ^^T :]). Nothing reported to GCC.
+- patches/Dockerfile (2026-11-26, subagent): Linux image with GCC at commit 871ec62eab32 (= snapshot 17-20261122,
+  checked file by file) + the patches, CMake, Ninja. Only checked with docker build --check and patch dry runs; the
+  image was never built (not enough free memory), so the compile and a metalib build inside it are untested.
+- Reflection cannot tell an inline namespace from a plain one (probed 2026-11-26: no query in <meta> or
+  metafns.gperf; members_of(outer) lists the inline namespace, not its members; parent_of(member) is the inline
+  namespace). So namespaces carry [[=codegen::inlined]] and the generator writes namespace a::inline b.
+- Done 2026-11-26 (commit 1e919d9, pushed; export review in the commit after it): named module. `[[=metalib::exported]]` marks (exported.hpp; since replaced by metalib::codegen, above), generator
   src/lib/module/generate_module.cpp run at configure time, target metalib::module (METALIB_BUILD_MODULE),
   module_test. metalib::builtin is not exported; the collector scans a built registry
   (build_registry_from_namespace; builtin_auto_ability_registry is a constexpr variable in reflect.hpp), and a user
   registry holds the built-in one through a constexpr info variable. Full build + ctest 18/18. See [[build.cmake-setup]],
   [[design.kind-deduction]]; measurements in [[build.compile-cost]].
 - Idea from the user (2026-11-26): the exported marks and the generator could later help users generate source
-  files at compile time for their own code; nothing built for it yet (the generator walks only ^^metalib).
+  files at compile time for their own code. metalib::codegen::module_generator now takes any namespace tree; nothing
+  beyond module interfaces is generated yet.
 - Clang support once clang adopts P4101.

@@ -69,3 +69,13 @@ if(TARGET metalib_module)
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${dl_paths}")
     endif()
 endif()
+
+# the module interface generator, applied to a small namespace tree: every check is a static_assert
+add_executable(codegen_test codegen_test.cpp)
+target_link_libraries(codegen_test PRIVATE metalib::metalib)
+target_compile_definitions(codegen_test PRIVATE METALIB_CODEGEN)
+add_test(NAME "codegen_test: module interfaces" COMMAND codegen_test)
+if(dl_paths)
+    set_tests_properties("codegen_test: module interfaces" PROPERTIES
+            ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${dl_paths}")
+endif()

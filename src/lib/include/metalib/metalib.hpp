@@ -1,11 +1,8 @@
 #pragma once
 
-#include <metalib/exported.hpp>
-
-#include <metalib/cache.hpp>
-#include <metalib/handle.hpp>
-#include <metalib/literal.hpp>
-#include <metalib/message.hpp>
-#include <metalib/meta_result.hpp>
-#include <metalib/query.hpp>
+#include <metalib/core.hpp>
 #include <metalib/reflect.hpp>
+
+#ifdef METALIB_CODEGEN
+#include <metalib/codegen/module_interface.hpp>
+#endif

@@ -1,0 +1,50 @@
+c++/reflection: compare dependent splice types structurally
+
+A dependent splice type (SPLICE_SCOPE) was never equal to another
+SPLICE_SCOPE node: each node was its own TYPE_CANONICAL and
+structural_comptypes had no case for it.  So two declarations of the same
+entity that use [: ^^T :] were not recognized as the same, e.g. an alias
+template merged from the global module fragments of two modules
+("conflicting imported declaration"), or a function template redeclaration.
+
+gcc/cp/ChangeLog:
+
+	* reflect.cc (make_splice_scope): Set TYPE_STRUCTURAL_EQUALITY.
+	* typeck.cc (structural_comptypes) <case SPLICE_SCOPE>: New.  Compare
+	SPLICE_SCOPE_TYPE_P and SPLICE_SCOPE_EXPR.
+
+Diff is against gcc-17-20261122 (reflect.cc additionally carries an
+unrelated one-line local change near line 3924, not part of this diff).
+Apply with patch -p1 from the top of the source tree.
+
+--- a/gcc/cp/reflect.cc
++++ b/gcc/cp/reflect.cc
+@@ -9529,6 +9529,10 @@ make_splice_scope (tree expr, bool type_
+   tree t = cxx_make_type (SPLICE_SCOPE);
+   SPLICE_SCOPE_EXPR (t) = expr;
+   SPLICE_SCOPE_TYPE_P (t) = type_p;
++  /* Each SPLICE_SCOPE is a new node, so two of them that denote the same
++     type have to be compared by their operands (structural_comptypes),
++     not by TYPE_CANONICAL.  */
++  SET_TYPE_STRUCTURAL_EQUALITY (t);
+   return t;
+ }
+ 
+--- a/gcc/cp/typeck.cc
++++ b/gcc/cp/typeck.cc
+@@ -1674,6 +1674,15 @@ structural_comptypes (tree t1, tree t2,
+ 	return false;
+       break;
+ 
++    case SPLICE_SCOPE:
++      /* Two dependent splices are the same type (or scope) if their
++	 splice-specifiers are equivalent.  */
++      if (SPLICE_SCOPE_TYPE_P (t1) != SPLICE_SCOPE_TYPE_P (t2))
++	return false;
++      if (!cp_tree_equal (SPLICE_SCOPE_EXPR (t1), SPLICE_SCOPE_EXPR (t2)))
++	return false;
++      break;
++
+     default:
+       return false;
+     }

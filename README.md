@@ -43,7 +43,7 @@ Including `<metalib/metalib.hpp>` costs about 1.8 s per translation unit on GCC 
 
 - **Header unit.** `metalib.hpp` works as a header unit (`import <metalib/metalib.hpp>;`, or include translation by
   your build system): the import itself takes about 0.6 s, a file with 30 `mb::reflect<^^x>` 1.2 s instead of 2.2 s.
-- **Named module.** With `METALIB_BUILD_MODULE=ON` (the default when metalib is the top-level project) the target
+- **Named modules.** With `METALIB_BUILD_MODULE=ON` (the default when metalib is the top-level project) the target
   `metalib::module` provides `import metalib;`:
 
 ```cmake
@@ -51,17 +51,38 @@ target_link_libraries(app PRIVATE metalib::module)
 ```
 
 ```cpp
-#include <meta>      // the module exports metalib's names only: std headers are still yours to include
-import metalib;
+#include <meta>      // needed: the modules export metalib's names only, and GCC looks std names up in this file
+import metalib;      // or parts of it: metalib.core, metalib.reflect, metalib.codegen
 ```
 
-  The module interface is generated when the project is configured: `src/lib/module/generate_module.cpp` reflects on
-  the headers and writes an `export using` declaration for every entity marked `[[=metalib::exported]]`. A mark on a
-  namespace covers everything in it, nested namespaces included; `[[=metalib::exported(false)]]` takes a namespace or
-  an entity out again (`metalib::details`, `metalib::builtin`). Because `<meta>` is still included as text, the gain
-  is smaller than with the header unit (the same 30-reflection file: about 1.3 s, with half the memory).
-  `mb::reflect` works through the module, and so does a registry of your own that holds
-  `mb::builtin_auto_ability_registry`; the namespaces of `metalib::builtin` are not exported.
+  `metalib` re-exports three modules: `metalib.core` (kinds, abilities and everything else in
+  `<metalib/core.hpp>`), `metalib.reflect` (`mb::reflect<^^x>` and registries) and `metalib.codegen` (the marks and the
+  generator below). Each exports its own names only. For the same file with 30 reflections: `import metalib;` 266M,
+  `import metalib.core; import metalib.reflect;` 193M, the include 301M; a file that needs only
+  `import metalib.core;` starts at 134M.
+
+  The modules need GCC trunk with
+  [patches/gcc-reflect-splice-scope-comptypes.patch](patches/gcc-reflect-splice-scope-comptypes.patch): the three
+  interfaces include the same headers, and without the patch GCC rejects a file that imports more than one of them
+  ("conflicting imported declaration"). [patches/Dockerfile](patches/Dockerfile) builds a compiler with every patch
+  of that directory applied.
+
+  The interfaces are generated when the project is configured, by `metalib::codegen::module_generator`
+  (`module_generator().append_namespace(mb::reflect<^^metalib>).build()`), which reflects on the headers. The
+  headers say what a module is:
+
+  - `[[=metalib::codegen::export_module_name("metalib")]]` on a namespace names its module, and a nested namespace
+    can append a name of its own: `"core"` on the inline namespace `metalib::core` gives `metalib.core`;
+  - `[[=metalib::codegen::exported]]` marks what is exported (a mark on a namespace covers everything in it;
+    `exported(false)` takes a namespace or an entity out again, as for `metalib::details`);
+  - `[[=metalib::codegen::inlined]]` says that a namespace is inline, which reflection cannot see;
+  - `[[=metalib::codegen::inject{...}]]` adds text to an interface (this is where the `#include` of the header
+    comes from).
+
+  See [the reference](docs/reference.md#named-modules-metalibcodegen). With the header, the generator is
+  included only when `METALIB_CODEGEN` is defined.
+  `mb::reflect` works through the modules, and so does a registry of your own that holds
+  `mb::builtin_auto_ability_registry`. Do not mix `import` with an `#include` of the headers in one file.
 
 ## Concepts
 
@@ -129,10 +150,9 @@ constexpr auto my_reflect = mb::collect_abilities<R, my_registry>;
   is missing.
 - `mb::make_reflection<K>(r)`, `h.into<K>()` and `K::from(h)` return `K`; each is its `try_` form followed by
   `.unwrap()` (`h.into<K>()` is `h.try_into<K>().unwrap()`), so a failure is a compile error showing the message.
-- A `meta_result` holding a handle has `try_into<K>()` (keeps the original error) and `into<K>()` too:
-  `t.try_substitute({mb::reflect<^^int>}).try_into<mb::class_type>()`, `d.try_get_parent().into<mb::namespace_>()`. The
-  plain forms return a `handle`, narrowed the same way: `t.substitute({mb::reflect<^^int>}).into<mb::class_type>()`,
-  `d.get_parent().into<mb::namespace_>()`.
+- Narrowing is a member of handles only. A `meta_result` is unwrapped first:
+  `t.try_substitute({mb::reflect<^^int>}).unwrap().try_into<mb::class_type>()`. The plain forms return a `handle`
+  directly: `t.substitute({mb::reflect<^^int>}).into<mb::class_type>()`, `d.get_parent().into<mb::namespace_>()`.
 - `k.try_attach_ability<A...>()` returns `meta_result<K::with_ability<A...>>` and `k.attach_ability<A...>()` the kind
   itself: the same handle with more abilities, checked against their requirements.
 - A kind has no public constructor from a reflection: `reflect<R>` and `make_reflection<K>(r)` are the ways in.
@@ -157,7 +177,7 @@ something computed, `make_` for something constructed. An operation that cannot 
 `get_members()`, `get_u8display_string()`, `get_current_namespace()`.
 
 A failed result holds a `metalib::meta_error`, a plain value the caller can inspect: `error().message()` /
-`u8message()`, `u8action()` (the failed `std::meta` call, e.g. `extract<long int*>()`; empty otherwise), `from()` (the
+`u8message()`, `u8action()` (the failed call, e.g. `extract<long int*>()`; empty otherwise), `from()` (the
 reflection), `where()`. `error().throw_()` throws it as `metalib::meta_exception` (whose `error()` gives the
 `meta_error` back); `unwrap()` does that on failure, which during constant evaluation is a compile error showing the
 message. Also `has_value()` and `unwrap_or(v)`. A failed result holds a reflection, so it is a consteval-only value and
@@ -168,14 +188,14 @@ message names the reflection by its display string:
 
 - a kind check: `reflection 'int' is not a class type`;
 - a precondition a query checks itself: `reflection 'int' has no parent`, `type 'int' is not tuple-like`;
-- a failed `std::meta` call: `unable to <verb> <call> <preposition> '<reflection>'`, the call with its operands (as in
-  the metalib call), then the reflection and, when it has one, its type:
+- a failed operation: `unable to <call> <preposition> '<reflection>'`, the name of the failed function with its
+  operands, then the reflection and, when it has one, its type:
 
 ```text
 unable to extract<long int*>() from 'seven' of type 'const int'
 unable to substitute(long int) into 'template<class T>  requires  sizeof (T) == 1 struct small_box'
-unable to find common_type_with(A) from 'int'
-unable to make data_member_spec() from 'void'
+unable to find_common_type_with(A) from 'int'
+unable to make_data_member_spec() from 'void'
 error: uncaught exception of type 'metalib::meta_exception'; 'what()': 'unable to extract<long int*>() from 'seven' of type 'const int''
 ```
 
@@ -244,7 +264,7 @@ static_assert(m.get_type() == mb::reflect<^^int>, mb::message("member ", m, " mu
 ### Parents
 
 Every declaration kind has `has_parent()`, `try_get_parent()` → `meta_result<handle>` and `get_parent()` → `handle`;
-narrow it yourself: `d.try_get_parent().try_into<mb::class_type>()` or `d.get_parent().into<mb::class_type>()`. Types
+narrow it yourself: `d.get_parent().try_into<mb::class_type>()` or `d.get_parent().into<mb::class_type>()`. Types
 like `int` and the global namespace have no parent.
 
 ### Templates
@@ -292,10 +312,15 @@ Tests (Catch2, fetched by CMake) live in `src/test`, one executable per file. Al
 
 ## Layout
 
-- `src/lib/include/metalib/`: `handle.hpp` (kinds and abilities), `meta_result.hpp`, `literal.hpp`,
-  `query.hpp`, `cache.hpp`, `message.hpp`, `encoding.hpp`, `metalib.hpp`.
+- `src/lib/include/metalib/`: `handle.hpp` (kinds and abilities), `meta_result.hpp`, `literal.hpp`, `query.hpp`,
+  `cache.hpp`, `message.hpp`, `encoding.hpp`, `codegen/marks.hpp` (the marks that describe named modules), and
+  `core.hpp` (all of these); `reflect.hpp` (`reflect<^^x>` and ability registries); `metalib.hpp` (`core.hpp` and
+  `reflect.hpp`); `codegen/module_interface.hpp` (the generator, included by `metalib.hpp` when `METALIB_CODEGEN`
+  is defined).
+- `src/lib/module/generate_module.cpp`: the program that writes the module interface at configure time.
 - `src/test/`: tests.
 - `docs/reference.md`: kinds, abilities and functions.
-- `patches/`: fixes for compiler bugs found while developing (GCC trunk).
+- `patches/`: fixes for compiler bugs found while developing (GCC trunk), and a `Dockerfile` that builds GCC with
+  them applied.
 - `.agent-toolkit/index/entries/`: design notes and investigation results kept with the project (`status.md` is
   the current state).

@@ -51,9 +51,8 @@ static_assert(bad_substitution.error().u8message() == expected_substitution_mess
 static_assert(bad_substitution.error().u8action() ==
               u8"substitute(" + std::u8string(std::meta::u8display_string_of(^^long)) + u8")");
 static_assert(bad_substitution.error().from() == ^^one_byte_box);
-static_assert(bad_substitution.try_into<mb::class_type>().error().u8message() == expected_substitution_message());
 static_assert(mb::reflect<^^one_byte_box>.try_substitute({mb::reflect<^^char>})
-                  .try_into<mb::class_type>().has_value());
+                  .unwrap().try_into<mb::class_type>().has_value());
 
 TEST_CASE("template: compile-time checks") {
     SUCCEED("all checks are static_asserts");

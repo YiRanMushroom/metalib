@@ -20,7 +20,10 @@ snippet = "try_get_parent"
   so making an accessor fallible later only adds its try_ form.
 - Fallible by probe on GCC trunk (scratchpad fallible_probe): size_of / alignment_of (incomplete type, bit-field),
   type_of / return_type_of (undeduced auto), enumerators_of (opaque enum), offset_of (virtual base of an abstract
-  class). Those are pairs; they fail with "unable to get size() from '<display>'".
+  class). Those are pairs; they fail with "unable to get_size() from '<display>'".
+- Error messages name the function as the user calls it (user request 2026-11-26): "unable to
+  find_common_type_with(A) from 'int'", not "unable to find common_type_with(A)". details::unable takes the call
+  (call_of(u8"get_size")), a preposition and the subject; there is no separate verb.
 - Value types (meta_error, meta_result, array_literal, string literals) and cache:: variables keep noun names.
 - The plain form of a pair is a non-template `this handle const &self` function that attaches its own ability and calls
   the try_ form: `details::attach_ability_unchecked<typed>(self).try_get_type().unwrap()` (user decision 2026-11-26; a

@@ -48,5 +48,12 @@ namespace mine {
 static_assert(mb::collect_abilities<^^mine::x, mine::registry>.has_single_letter());
 static_assert(mb::collect_abilities<^^mine::x, mine::registry>.get_type() == mb::reflect<^^int>);
 
+namespace [[=mb::codegen::exported, =mb::codegen::export_module_name("sample")]] sample { int value = 0; }
+constexpr auto sample_files =
+    std::define_static_array(mb::codegen::module_generator().append_namespace(mb::reflect<^^sample>).build());
+static_assert(sample_files.size() == 1 && sample_files[0].path == "sample.cppm");
+static_assert(sample_files[0].text.view().contains("export module sample;\n") &&
+              sample_files[0].text.view().contains("    using ::sample::value;\n"));
+
 int main() {
 }

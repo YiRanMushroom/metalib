@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace metalib {
+namespace metalib::inline core {
     template<typename T>
     struct array_literal : std::ranges::view_interface<array_literal<T>> {
         T const *pointer = nullptr;

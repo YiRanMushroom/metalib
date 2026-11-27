@@ -5,7 +5,7 @@
 #include <metalib/literal.hpp>
 #include <type_traits>
 
-namespace metalib {
+namespace metalib::inline core {
     namespace cache {
         enum class access {
             unprivileged,

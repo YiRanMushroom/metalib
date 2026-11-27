@@ -25,7 +25,7 @@ static_assert(tvar.get_variant_size() == 2 && tvar.get_variant_alternative(1) ==
 static_assert(tint.find_common_type_with({mb::reflect<^^long>}) == mb::reflect<^^long>);
 static_assert(!tint.try_find_common_type_with({mb::reflect<^^A>}).has_value());
 static_assert(tint.try_find_common_type_with({mb::reflect<^^A>}).error().u8message() ==
-              u8"unable to find common_type_with(" + std::u8string(std::meta::u8display_string_of(^^A)) + u8") from '" +
+              u8"unable to find_common_type_with(" + std::u8string(std::meta::u8display_string_of(^^A)) + u8") from '" +
                   std::u8string(std::meta::u8display_string_of(^^int)) + u8"'");
 static_assert(mb::reflect<^^int &>.find_common_reference_with({mb::reflect<^^int const &>}) ==
               mb::reflect<^^int const &>);

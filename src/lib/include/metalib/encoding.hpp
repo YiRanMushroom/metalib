@@ -6,7 +6,7 @@
 #include <ranges>
 #include <string_view>
 
-namespace metalib::details {
+namespace metalib::inline core::details {
     template<typename Char>
     consteval bool is_ascii(std::basic_string_view<Char> text) {
         return std::ranges::all_of(text, [](Char c) { return static_cast<unsigned>(c) < 0x80; });

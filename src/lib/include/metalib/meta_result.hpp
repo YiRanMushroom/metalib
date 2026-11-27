@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace metalib {
+namespace metalib::inline core {
     class meta_error {
     public:
         consteval meta_error(std::u8string_view message, std::meta::info from,
@@ -132,21 +132,6 @@ namespace metalib {
 
         constexpr meta_error const &error() const noexcept {
             return *m_error;
-        }
-
-        template<typename K>
-            requires requires(T const &value) { value.template try_into<K>(); }
-        consteval meta_result<K> try_into() const {
-            if (!m_value) {
-                return meta_result<K>(*m_error);
-            }
-            return m_value->template try_into<K>();
-        }
-
-        template<typename K>
-            requires requires(T const &value) { value.template into<K>(); }
-        consteval K into() const {
-            return unwrap().template into<K>();
         }
 
     private:

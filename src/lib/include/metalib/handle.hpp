@@ -28,7 +28,7 @@
 #endif
 #endif
 
-namespace metalib {
+namespace metalib::inline core {
     template<typename... Abilities>
     struct basic_interface;
 
@@ -477,14 +477,9 @@ namespace metalib {
             return std::nullopt;
         }
 
-        consteval meta_error unable(std::u8string_view verb, std::u8string_view action, std::u8string_view preposition,
-                                    std::meta::info subject,
+        consteval meta_error unable(std::u8string_view action, std::u8string_view preposition, std::meta::info subject,
                                     std::source_location where = std::source_location::current()) {
             std::u8string message = u8"unable to ";
-            if (!verb.empty()) {
-                message += verb;
-                message += u8" ";
-            }
             message += action;
             message += u8" ";
             message += preposition;
@@ -685,7 +680,7 @@ namespace metalib {
             consteval meta_result<std::size_t> try_get_size(this handle const &self) {
                 return details::attempt<std::size_t>(
                     [&] { return std::meta::size_of(self.info); },
-                    [&] { return details::unable(u8"get", details::call_of(u8"size"), u8"from", self.info); });
+                    [&] { return details::unable(details::call_of(u8"get_size"), u8"from", self.info); });
             }
 
             consteval std::size_t get_size(this handle const &self) {
@@ -695,7 +690,7 @@ namespace metalib {
             consteval meta_result<std::size_t> try_get_alignment(this handle const &self) {
                 return details::attempt<std::size_t>(
                     [&] { return std::meta::alignment_of(self.info); },
-                    [&] { return details::unable(u8"get", details::call_of(u8"alignment"), u8"from", self.info); });
+                    [&] { return details::unable(details::call_of(u8"get_alignment"), u8"from", self.info); });
             }
 
             consteval std::size_t get_alignment(this handle const &self) {
@@ -1160,7 +1155,7 @@ namespace metalib {
                 return details::attempt<T>(
                     [&]() -> T { return std::meta::extract<T>(self.info); },
                     [&] {
-                        return details::unable({}, details::template_call_of(u8"extract", {^^T}), u8"from", self.info);
+                        return details::unable(details::template_call_of(u8"extract", {^^T}), u8"from", self.info);
                     });
             }
 
@@ -1182,7 +1177,7 @@ namespace metalib {
                 return details::attempt<T>(
                     [&]() -> T { return std::meta::extract<T>(self.info); },
                     [&] {
-                        return details::unable({}, details::template_call_of(u8"extract", {^^T}), u8"from", self.info);
+                        return details::unable(details::template_call_of(u8"extract", {^^T}), u8"from", self.info);
                     });
             }
 
@@ -1806,7 +1801,7 @@ namespace metalib {
                 std::vector<std::meta::info> infos = details::infos_of(arguments);
                 return details::attempt<handle>(
                     [&] { return handle{std::meta::substitute(self.info, infos)}; },
-                    [&] { return details::unable({}, details::call_of(u8"substitute", infos), u8"into", self.info); });
+                    [&] { return details::unable(details::call_of(u8"substitute", infos), u8"into", self.info); });
             }
 
             consteval handle substitute(this handle const &self, std::vector<handle> const &arguments) {
@@ -1910,7 +1905,7 @@ namespace metalib {
             consteval meta_result<std::meta::member_offset> try_get_offset(this handle const &self) {
                 return details::attempt<std::meta::member_offset>(
                     [&] { return std::meta::offset_of(self.info); },
-                    [&] { return details::unable(u8"get", details::call_of(u8"offset"), u8"from", self.info); });
+                    [&] { return details::unable(details::call_of(u8"get_offset"), u8"from", self.info); });
             }
 
             consteval std::meta::member_offset get_offset(this handle const &self) {
@@ -1944,7 +1939,7 @@ namespace metalib {
             consteval meta_result<handle> try_get_variable(this handle const &self) {
                 return details::attempt<handle>(
                     [&] { return handle{std::meta::variable_of(self.info)}; },
-                    [&] { return details::unable(u8"get", details::call_of(u8"variable"), u8"from", self.info); });
+                    [&] { return details::unable(details::call_of(u8"get_variable"), u8"from", self.info); });
             }
 
             consteval handle get_variable(this handle const &self) {
@@ -2060,7 +2055,7 @@ namespace metalib {
                     std::meta::data_member_spec(member_type.info, std::move(options)));
             },
             [&] {
-                return details::unable(u8"make", details::call_of(u8"data_member_spec"), u8"from", member_type.info);
+                return details::unable(details::call_of(u8"make_data_member_spec"), u8"from", member_type.info);
             });
     }
 
@@ -2075,7 +2070,7 @@ namespace metalib {
         return details::attempt<type>(
             [&] { return details::reflect_unchecked<type>(std::meta::define_aggregate(incomplete.info, infos)); },
             [&] {
-                return details::unable(u8"apply", details::call_of(u8"define_aggregate", infos), u8"to",
+                return details::unable(details::call_of(u8"define_aggregate", infos), u8"for",
                                        incomplete.info);
             });
     }
@@ -2293,7 +2288,7 @@ namespace metalib {
         return details::attempt<type>(
             [&] { return details::reflect_unchecked<type>(std::meta::common_type(types)); },
             [&] {
-                return details::unable(u8"find", details::call_of(u8"common_type_with", infos), u8"from", self.info);
+                return details::unable(details::call_of(u8"find_common_type_with", infos), u8"from", self.info);
             });
     }
 
@@ -2310,7 +2305,7 @@ namespace metalib {
         return details::attempt<type>(
             [&] { return details::reflect_unchecked<type>(std::meta::common_reference(types)); },
             [&] {
-                return details::unable(u8"find", details::call_of(u8"common_reference_with", infos), u8"from",
+                return details::unable(details::call_of(u8"find_common_reference_with", infos), u8"from",
                                        self.info);
             });
     }
@@ -2326,7 +2321,7 @@ namespace metalib {
         return details::attempt<type>(
             [&] { return details::reflect_unchecked<type>(std::meta::invoke_result(self.info, infos)); },
             [&] {
-                return details::unable(u8"find", details::call_of(u8"invoke_result_with", infos), u8"from", self.info);
+                return details::unable(details::call_of(u8"find_invoke_result_with", infos), u8"from", self.info);
             });
     }
 
@@ -2360,7 +2355,7 @@ namespace metalib {
     consteval meta_result<type> ability::typed::try_get_type(this handle const &self) {
         return details::attempt<type>(
             [&] { return details::reflect_unchecked<type>(std::meta::type_of(self.info)); },
-            [&] { return details::unable(u8"get", details::call_of(u8"type"), u8"from", self.info); });
+            [&] { return details::unable(details::call_of(u8"get_type"), u8"from", self.info); });
     }
 
     consteval type ability::typed::get_type(this handle const &self) {
@@ -2410,7 +2405,7 @@ namespace metalib {
     consteval meta_result<std::vector<enumerator>> ability::enumeration::try_get_enumerators(this handle const &self) {
         return details::attempt<std::vector<enumerator>>(
             [&] { return details::handles_of<enumerator>(std::meta::enumerators_of(self.info)); },
-            [&] { return details::unable(u8"get", details::call_of(u8"enumerators"), u8"from", self.info); });
+            [&] { return details::unable(details::call_of(u8"get_enumerators"), u8"from", self.info); });
     }
 
     consteval std::vector<enumerator> ability::enumeration::get_enumerators(this handle const &self) {
@@ -2440,7 +2435,7 @@ namespace metalib {
     consteval meta_result<type> ability::signature::try_get_return_type(this handle const &self) {
         return details::attempt<type>(
             [&] { return details::reflect_unchecked<type>(std::meta::return_type_of(self.info)); },
-            [&] { return details::unable(u8"get", details::call_of(u8"return_type"), u8"from", self.info); });
+            [&] { return details::unable(details::call_of(u8"get_return_type"), u8"from", self.info); });
     }
 
     consteval type ability::signature::get_return_type(this handle const &self) {
@@ -2450,7 +2445,7 @@ namespace metalib {
     consteval meta_result<object> ability::storage_duration::try_get_object(this handle const &self) {
         return details::attempt<metalib::object>(
             [&] { return details::reflect_unchecked<metalib::object>(std::meta::object_of(self.info)); },
-            [&] { return details::unable(u8"get", details::call_of(u8"object"), u8"from", self.info); });
+            [&] { return details::unable(details::call_of(u8"get_object"), u8"from", self.info); });
     }
 
     consteval object ability::storage_duration::get_object(this handle const &self) {

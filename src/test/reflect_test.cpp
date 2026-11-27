@@ -18,23 +18,23 @@ namespace extra {
     struct unexplained {
         static consteval bool check(std::meta::info r) { return std::meta::is_type(r); }
     };
-    namespace registry {
+    namespace abilities {
         namespace builtin = mb::builtin::auto_ability_root;
         using single_letter = extra::single_letter;
     }
-    constexpr std::meta::info built = mb::build_registry_from_namespace(^^registry);
-    template<std::meta::info R> constexpr auto reflect = mb::collect_abilities<R, built>;
+    constexpr std::meta::info registry = mb::build_registry_from_namespace(^^abilities);
+    template<std::meta::info R> constexpr auto reflect = mb::collect_abilities<R, registry>;
 }
 namespace metalib::builtin::auto_ability_root { using added_after_the_header = extra::single_letter; }
-namespace frozen { using single_letter = extra::single_letter; }
-constexpr std::meta::info frozen_registry = mb::build_registry_from_namespace(^^frozen);
+namespace early { using single_letter = extra::single_letter; }
+constexpr std::meta::info early_registry = mb::build_registry_from_namespace(^^early);
 namespace composed {
     constexpr std::meta::info builtin = mb::builtin_auto_ability_registry;
     using single_letter = extra::single_letter;
 }
 constexpr std::meta::info composed_registry = mb::build_registry_from_namespace(^^composed);
 namespace composed { int q = 0; }
-namespace frozen { using unexplained = extra::unexplained; }
+namespace early { using unexplained = extra::unexplained; }
 namespace cyclic { namespace inner { namespace back = cyclic; } }
 namespace hollow { using single_letter = extra::single_letter; namespace nothing {} }
 int x = 0;
@@ -177,7 +177,7 @@ consteval std::vector<std::string_view> names_of(std::meta::info ability) {
     return names;
 }
 consteval std::vector<std::meta::info> registered_abilities() {
-    return mb::details::registered_in(mb::builtin_auto_ability_registry);
+    return mb::reflect_details::registered_in(mb::builtin_auto_ability_registry);
 }
 consteval bool every_ability_is_registered() {
     std::vector<std::meta::info> const registered = registered_abilities();
@@ -190,12 +190,12 @@ consteval bool every_ability_is_registered() {
     return true;
 }
 static_assert(every_ability_is_registered() && registered_abilities().size() == 48);
-static_assert(mb::details::registered_in(frozen_registry).size() == 1 &&
-              mb::details::registered_in(extra::built).size() == 49 &&
-              mb::details::registered_in(composed_registry).size() == 49);
+static_assert(mb::reflect_details::registered_in(early_registry).size() == 1 &&
+              mb::reflect_details::registered_in(extra::registry).size() == 49 &&
+              mb::reflect_details::registered_in(composed_registry).size() == 49);
 static_assert(mb::collect_abilities<^^composed::q, composed_registry> == extra::reflect<^^composed::q>);
 static_assert(mb::collect_abilities<^^composed::q, composed_registry>.has_single_letter());
-static_assert(std::meta::members_of(^^frozen, std::meta::access_context::unchecked()).size() == 2);
+static_assert(std::meta::members_of(^^early, std::meta::access_context::unchecked()).size() == 2);
 
 consteval std::string mismatches() {
     std::vector<std::meta::info> const samples = {
@@ -212,11 +212,11 @@ consteval std::string mismatches() {
     std::string text;
     for (std::meta::info sample: samples) {
         std::vector<std::meta::info> collected =
-            std::meta::template_arguments_of(mb::details::collected_kind<mb::builtin_auto_ability_registry>(sample));
+            std::meta::template_arguments_of(mb::reflect_details::collected_kind<mb::builtin_auto_ability_registry>(sample));
         bool const typed = std::erase_if(collected, is_typed_as) != 0;
         std::vector<std::meta::info> expected;
         template for (constexpr std::meta::info ability:
-                      std::define_static_array(mb::details::registered_in(mb::builtin_auto_ability_registry))) {
+                      std::define_static_array(mb::reflect_details::registered_in(mb::builtin_auto_ability_registry))) {
             if (mb::details::ability_holds<typename [:ability:]>(sample) && !(typed && ability == ^^ab::constant)) {
                 expected.push_back(ability);
             }
@@ -243,15 +243,15 @@ static_assert(mismatched.empty(), mismatched);
 
 consteval std::u8string not_a_registry_message() {
     try {
-        mb::details::registered_in(^^extra::registry);
+        mb::reflect_details::registered_in(^^extra::abilities);
     } catch (mb::meta_exception const &failure) {
         return std::u8string(failure.error().u8message());
     }
     return {};
 }
-consteval std::u8string cycle_message(std::meta::info root) {
+consteval std::u8string build_error(std::meta::info registry_namespace) {
     try {
-        mb::build_registry_from_namespace(root);
+        mb::build_registry_from_namespace(registry_namespace);
     } catch (mb::meta_exception const &failure) {
         return std::u8string(failure.error().u8message());
     }
@@ -260,11 +260,11 @@ consteval std::u8string cycle_message(std::meta::info root) {
 consteval std::u8string quoted(std::meta::info r) {
     return u8"'" + std::u8string(std::meta::u8display_string_of(r)) + u8"'";
 }
-static_assert(cycle_message(^^mb::builtin::auto_ability_root).empty() && cycle_message(^^extra::registry).empty());
+static_assert(build_error(^^mb::builtin::auto_ability_root).empty() && build_error(^^extra::abilities).empty());
 static_assert(not_a_registry_message() ==
-              quoted(^^extra::registry) + u8" is not an ability registry made by build_registry_from_namespace");
-static_assert(cycle_message(^^hollow) == u8"ability registry " + quoted(^^hollow::nothing) + u8" has no entries");
-static_assert(cycle_message(^^cyclic) ==
+              quoted(^^extra::abilities) + u8" is not an ability registry made by build_registry_from_namespace");
+static_assert(build_error(^^hollow) == u8"ability registry " + quoted(^^hollow::nothing) + u8" has no entries");
+static_assert(build_error(^^cyclic) ==
               u8"ability registry " + quoted(^^cyclic) + u8" has a cycle: " + quoted(^^cyclic) + u8" contains " +
               quoted(^^cyclic::inner) + u8" contains " + quoted(^^cyclic));
 
