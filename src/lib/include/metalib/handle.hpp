@@ -100,11 +100,6 @@ namespace metalib {
     template<typename Set, typename... Removed>
     using except = typename [:details::set_except(^^Set, {^^Removed...}):];
 
-    struct auto_ability_t {
-    };
-
-    inline constexpr auto_ability_t auto_ability{};
-
     class handle;
 
     namespace details {
@@ -608,7 +603,7 @@ namespace metalib {
     }
 
     namespace ability {
-        struct [[=auto_ability]] identifiable {
+        struct identifiable {
             static constexpr std::u8string_view capability = u8"have an identifier";
 
             static consteval bool check(std::meta::info r) {
@@ -652,7 +647,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] displayable {
+        struct displayable {
             static consteval bool check(std::meta::info) {
                 return true;
             }
@@ -678,7 +673,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] sized {
+        struct sized {
             static constexpr std::u8string_view capability = u8"have a size";
 
             static consteval bool check(std::meta::info r) {
@@ -708,7 +703,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] type_traits {
+        struct type_traits {
             static constexpr std::u8string_view capability = u8"have type traits";
 
             static consteval bool check(std::meta::info r) {
@@ -1038,7 +1033,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] type_transforms {
+        struct type_transforms {
             static constexpr std::u8string_view capability = u8"be transformed as a type";
 
             static consteval bool check(std::meta::info r) {
@@ -1103,7 +1098,7 @@ namespace metalib {
             consteval type find_invoke_result_with(this handle const &self, std::vector<type> const &arguments);
         };
 
-        struct [[=auto_ability]] templated {
+        struct templated {
             static constexpr std::u8string_view capability = u8"be a template specialization";
 
             static consteval bool check(std::meta::info r) {
@@ -1132,7 +1127,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] annotatable {
+        struct annotatable {
             static constexpr std::u8string_view capability = u8"have annotations";
 
             static consteval bool check(std::meta::info r) {
@@ -1174,7 +1169,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] constant {
+        struct constant {
             static constexpr std::u8string_view capability = u8"be extracted";
 
             static consteval bool check(std::meta::info r) {
@@ -1197,7 +1192,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] typed {
+        struct typed {
             static constexpr std::u8string_view capability = u8"have a type";
 
             static consteval bool check(std::meta::info r) {
@@ -1212,7 +1207,7 @@ namespace metalib {
             consteval metalib::type get_type(this handle const &self);
         };
 
-        struct [[=auto_ability]] type_entity {
+        struct type_entity {
             static constexpr std::u8string_view requirement = u8"a type";
 
             static consteval bool check(std::meta::info r) {
@@ -1230,7 +1225,7 @@ namespace metalib {
             consteval bool is(this handle const &self, type const &other);
         };
 
-        struct [[=auto_ability]] arithmetic {
+        struct arithmetic {
             static constexpr std::u8string_view requirement = u8"an arithmetic type";
 
             static consteval bool check(std::meta::info r) {
@@ -1246,7 +1241,7 @@ namespace metalib {
             consteval type make_unsigned(this handle const &self);
         };
 
-        struct [[=auto_ability]] enumeration {
+        struct enumeration {
             static constexpr std::u8string_view requirement = u8"an enumeration type";
 
             static consteval bool check(std::meta::info r) {
@@ -1264,7 +1259,7 @@ namespace metalib {
             consteval std::vector<enumerator> get_enumerators(this handle const &self);
         };
 
-        struct [[=auto_ability]] parented {
+        struct parented {
             static constexpr std::u8string_view capability = u8"have a parent";
 
             static consteval bool check(std::meta::info r) {
@@ -1288,7 +1283,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] record {
+        struct record {
             static constexpr std::u8string_view requirement = u8"a complete class or union type";
 
             static consteval bool check(std::meta::info r) {
@@ -1316,7 +1311,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] class_record {
+        struct class_record {
             static constexpr std::u8string_view requirement = u8"a class type";
 
             static consteval bool check(std::meta::info r) {
@@ -1350,7 +1345,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] union_record {
+        struct union_record {
             static constexpr std::u8string_view requirement = u8"a union type";
 
             static consteval bool check(std::meta::info r) {
@@ -1358,7 +1353,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] accessible {
+        struct accessible {
             static constexpr std::u8string_view capability = u8"have an access specifier";
 
             static consteval bool check(std::meta::info r) {
@@ -1383,7 +1378,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] type_alias {
+        struct type_alias {
             static constexpr std::u8string_view requirement = u8"a type alias";
 
             static consteval bool check(std::meta::info r) {
@@ -1391,7 +1386,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] non_alias {
+        struct non_alias {
             static constexpr std::u8string_view requirement = u8"the type's own declaration";
 
             static consteval bool check(std::meta::info r) {
@@ -1399,7 +1394,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] class_member {
+        struct class_member {
             static constexpr std::u8string_view requirement = u8"a class member";
 
             static consteval bool check(std::meta::info r) {
@@ -1407,7 +1402,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] callable {
+        struct callable {
             static constexpr std::u8string_view capability = u8"be called";
 
             static consteval bool check(std::meta::info r) {
@@ -1441,7 +1436,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] signature {
+        struct signature {
             static constexpr std::u8string_view capability = u8"have a return type";
 
             static consteval bool check(std::meta::info r) {
@@ -1497,7 +1492,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] virtual_specifier {
+        struct virtual_specifier {
             static constexpr std::u8string_view capability = u8"be virtual";
 
             static consteval bool check(std::meta::info r) {
@@ -1510,7 +1505,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] override_specifier {
+        struct override_specifier {
             static constexpr std::u8string_view capability = u8"override a virtual function";
 
             static consteval bool check(std::meta::info r) {
@@ -1530,7 +1525,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] explicit_specifier {
+        struct explicit_specifier {
             static constexpr std::u8string_view capability = u8"be explicit";
 
             static consteval bool check(std::meta::info r) {
@@ -1542,7 +1537,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] nonstatic_data {
+        struct nonstatic_data {
             static constexpr std::u8string_view requirement = u8"a non-static data member";
 
             static consteval bool check(std::meta::info r) {
@@ -1570,7 +1565,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] static_data {
+        struct static_data {
             static constexpr std::u8string_view requirement = u8"a static data member";
 
             static consteval bool check(std::meta::info r) {
@@ -1578,7 +1573,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] storage_duration {
+        struct storage_duration {
             static constexpr std::u8string_view capability = u8"have a storage duration";
 
             static consteval bool check(std::meta::info r) {
@@ -1602,7 +1597,7 @@ namespace metalib {
             consteval object get_object(this handle const &self);
         };
 
-        struct [[=auto_ability]] linkage {
+        struct linkage {
             static constexpr std::u8string_view capability = u8"have linkage";
 
             static consteval bool check(std::meta::info r) {
@@ -1630,7 +1625,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] namespace_entity {
+        struct namespace_entity {
             static constexpr std::u8string_view requirement = u8"a namespace";
 
             static consteval bool check(std::meta::info r) {
@@ -1647,7 +1642,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] namespace_alias_entity {
+        struct namespace_alias_entity {
             static constexpr std::u8string_view requirement = u8"a namespace alias";
 
             static consteval bool check(std::meta::info r) {
@@ -1657,7 +1652,7 @@ namespace metalib {
             consteval metalib::namespace_ get_target(this handle const &self);
         };
 
-        struct [[=auto_ability]] namespace_member_entity {
+        struct namespace_member_entity {
             static constexpr std::u8string_view requirement = u8"a namespace member";
 
             static consteval bool check(std::meta::info r) {
@@ -1665,7 +1660,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] variable_entity {
+        struct variable_entity {
             static constexpr std::u8string_view requirement = u8"a variable";
 
             static consteval bool check(std::meta::info r) {
@@ -1673,7 +1668,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] function_entity {
+        struct function_entity {
             static constexpr std::u8string_view requirement = u8"a function";
 
             static consteval bool check(std::meta::info r) {
@@ -1681,7 +1676,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] constant_entity {
+        struct constant_entity {
             static constexpr std::u8string_view requirement = u8"a constant";
 
             static consteval bool check(std::meta::info r) {
@@ -1697,7 +1692,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] value_entity {
+        struct value_entity {
             static constexpr std::u8string_view requirement = u8"a value";
 
             static consteval bool check(std::meta::info r) {
@@ -1705,7 +1700,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] object_entity {
+        struct object_entity {
             static constexpr std::u8string_view requirement = u8"an object";
 
             static consteval bool check(std::meta::info r) {
@@ -1713,7 +1708,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] annotation_entity {
+        struct annotation_entity {
             static constexpr std::u8string_view requirement = u8"an annotation";
 
             static consteval bool check(std::meta::info r) {
@@ -1723,14 +1718,14 @@ namespace metalib {
             consteval metalib::constant get_constant(this handle const &self);
         };
 
-        struct [[=auto_ability]] structured_binding_entity {
+        struct structured_binding_entity {
             static constexpr std::u8string_view requirement = u8"a structured binding";
 
             static consteval bool check(std::meta::info r) {
                 return std::meta::is_structured_binding(r);
             }
         };
-        struct [[=auto_ability]] data_member_description_entity {
+        struct data_member_description_entity {
             static constexpr std::u8string_view requirement = u8"a data member description";
 
             static consteval bool check(std::meta::info r) {
@@ -1746,7 +1741,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] template_entity {
+        struct template_entity {
             static constexpr std::u8string_view requirement = u8"a template";
 
             static consteval bool check(std::meta::info r) {
@@ -1819,7 +1814,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] nonstatic_function {
+        struct nonstatic_function {
             static constexpr std::u8string_view requirement = u8"a non-static member function";
 
             static consteval bool check(std::meta::info r) {
@@ -1869,7 +1864,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] static_function {
+        struct static_function {
             static constexpr std::u8string_view requirement = u8"a static member function";
 
             static consteval bool check(std::meta::info r) {
@@ -1877,7 +1872,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] constructor_entity {
+        struct constructor_entity {
             static constexpr std::u8string_view requirement = u8"a constructor";
 
             static consteval bool check(std::meta::info r) {
@@ -1897,7 +1892,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] destructor_entity {
+        struct destructor_entity {
             static constexpr std::u8string_view requirement = u8"a destructor";
 
             static consteval bool check(std::meta::info r) {
@@ -1905,7 +1900,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] base_entity {
+        struct base_entity {
             static constexpr std::u8string_view requirement = u8"a base class relationship";
 
             static consteval bool check(std::meta::info r) {
@@ -1923,7 +1918,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] enumerator_entity {
+        struct enumerator_entity {
             static constexpr std::u8string_view requirement = u8"an enumerator";
 
             static consteval bool check(std::meta::info r) {
@@ -1931,7 +1926,7 @@ namespace metalib {
             }
         };
 
-        struct [[=auto_ability]] parameter_entity {
+        struct parameter_entity {
             static constexpr std::u8string_view requirement = u8"a function parameter";
 
             static consteval bool check(std::meta::info r) {

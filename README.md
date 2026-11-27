@@ -37,6 +37,32 @@ add_subdirectory(metalib)            # or FetchContent
 target_link_libraries(app PRIVATE metalib::metalib)   # adds -freflection for GCC
 ```
 
+### Faster builds: header unit or module
+
+Including `<metalib/metalib.hpp>` costs about 1.8 s per translation unit on GCC trunk. Two ways around it:
+
+- **Header unit.** `metalib.hpp` works as a header unit (`import <metalib/metalib.hpp>;`, or include translation by
+  your build system): the import itself takes about 0.6 s, a file with 30 `mb::reflect<^^x>` 1.2 s instead of 2.2 s.
+- **Named module.** With `METALIB_BUILD_MODULE=ON` (the default when metalib is the top-level project) the target
+  `metalib::module` provides `import metalib;`:
+
+```cmake
+target_link_libraries(app PRIVATE metalib::module)
+```
+
+```cpp
+#include <meta>      // the module exports metalib's names only: std headers are still yours to include
+import metalib;
+```
+
+  The module interface is generated when the project is configured: `src/lib/module/generate_module.cpp` reflects on
+  the headers and writes an `export using` declaration for every entity marked `[[=metalib::exported]]`. A mark on a
+  namespace covers everything in it, nested namespaces included; `[[=metalib::exported(false)]]` takes a namespace or
+  an entity out again (`metalib::details`, `metalib::builtin`). Because `<meta>` is still included as text, the gain
+  is smaller than with the header unit (the same 30-reflection file: about 1.3 s, with half the memory).
+  `mb::reflect` works through the module, and so does a registry of your own that holds
+  `mb::builtin_auto_ability_registry`; the namespaces of `metalib::builtin` are not exported.
+
 ## Concepts
 
 ### Handles and kinds
@@ -76,10 +102,22 @@ constexpr mb::class_type cls = mb::reflect<^^point>;              // converts to
 - A value, an object or an annotation gives the typed kind (`typed_constant<T>`, `typed_object<T>`,
   `typed_annotation<T>`), whose `extract()` needs no template argument. Like every typed kind it does not convert
   to the untyped `constant`, `value`, `object` or `annotation`.
-- Which abilities are tried: every class in `metalib::ability` marked `[[=auto_ability]]`, each asked through its
-  `static consteval bool check(std::meta::info)`. An ability of your own takes part when it is declared in that
-  namespace with the mark, before `mb::reflect` is first used in the translation unit (and the same in every
-  translation unit).
+- Which abilities are tried is written down as a tree of namespaces, `metalib::builtin::auto_ability_root`
+  (see [the reference](docs/reference.md#deduced-kinds-reflectr)). `mb::build_registry_from_namespace(^^ns)` reads
+  such a tree into a registry (a `std::meta::info`); the header does that once, in
+  `mb::builtin_auto_ability_registry`, and `mb::reflect<R>` is
+  `mb::collect_abilities<R, mb::builtin_auto_ability_registry>`. A registry holds what its namespaces contained
+  where it was built. To add abilities of your own, build a registry that contains the built-in one:
+
+```cpp
+namespace my_abilities {
+    constexpr std::meta::info builtin = mb::builtin_auto_ability_registry;
+    using single_letter = my::single_letter;        // an ability with a static consteval bool check(std::meta::info)
+}
+constexpr std::meta::info my_registry = mb::build_registry_from_namespace(^^my_abilities);
+template<std::meta::info R>
+constexpr auto my_reflect = mb::collect_abilities<R, my_registry>;
+```
 
 ### Narrowing
 

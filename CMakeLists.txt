@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(METALIB_BUILD_TESTS "Build the metalib tests" ${PROJECT_IS_TOP_LEVEL})
+option(METALIB_BUILD_MODULE "Generate and build the named module metalib (target metalib::module)"
+        ${PROJECT_IS_TOP_LEVEL})
 
 if(METALIB_BUILD_TESTS)
     include(FetchContent)

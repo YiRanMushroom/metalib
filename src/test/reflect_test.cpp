@@ -1,20 +1,42 @@
 #include <catch2/catch_test_macros.hpp>
 #include <metalib/metalib.hpp>
 #include <concepts>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <vector>
 namespace mb = metalib;
 namespace ab = metalib::ability;
-namespace metalib::ability {
-    struct [[=auto_ability]] single_letter {
+namespace extra {
+    struct single_letter {
         static constexpr std::u8string_view requirement = u8"an entity with a one-letter name";
         static consteval bool check(std::meta::info r) {
             return std::meta::has_identifier(r) && std::meta::identifier_of(r).size() == 1;
         }
-        consteval bool has_single_letter(this handle const &) { return true; }
+        consteval bool has_single_letter(this mb::handle const &) { return true; }
     };
+    struct unexplained {
+        static consteval bool check(std::meta::info r) { return std::meta::is_type(r); }
+    };
+    namespace registry {
+        namespace builtin = mb::builtin::auto_ability_root;
+        using single_letter = extra::single_letter;
+    }
+    constexpr std::meta::info built = mb::build_registry_from_namespace(^^registry);
+    template<std::meta::info R> constexpr auto reflect = mb::collect_abilities<R, built>;
 }
+namespace metalib::builtin::auto_ability_root { using added_after_the_header = extra::single_letter; }
+namespace frozen { using single_letter = extra::single_letter; }
+constexpr std::meta::info frozen_registry = mb::build_registry_from_namespace(^^frozen);
+namespace composed {
+    constexpr std::meta::info builtin = mb::builtin_auto_ability_registry;
+    using single_letter = extra::single_letter;
+}
+constexpr std::meta::info composed_registry = mb::build_registry_from_namespace(^^composed);
+namespace composed { int q = 0; }
+namespace frozen { using unexplained = extra::unexplained; }
+namespace cyclic { namespace inner { namespace back = cyclic; } }
+namespace hollow { using single_letter = extra::single_letter; namespace nothing {} }
 int x = 0;
 constexpr int five = 5;
 void fn([[=1]] int first);
@@ -25,13 +47,13 @@ struct [[=7]] Shape : Base {
     Shape(); ~Shape(); template<typename> struct Member {};
 };
 struct Pair { int left; int right; void swap(); };
+enum Plain { plain_value };
+struct Bits { int flag : 1; enum Inner { inner_value }; };
+inline namespace versioned { int inlined = 0; }
+namespace { int hidden = 0; }
+using Renamed = Shape;
 auto [first_part, second_part] = Pair{1, 2};
 constexpr int triple[3] = {1, 2, 3};
-namespace metalib::ability {
-    struct unexplained {
-        static consteval bool check(std::meta::info r) { return std::meta::is_type(r); }
-    };
-}
 consteval std::meta::info special_member(bool destructor) {
     for (std::meta::info member: std::meta::members_of(^^Shape, std::meta::access_context::unchecked())) {
         if (destructor ? std::meta::is_destructor(member)
@@ -59,7 +81,7 @@ template<std::meta::info R> using deduced = std::remove_cv_t<decltype(mb::reflec
 template<std::meta::info R, typename K> concept gives = std::convertible_to<deduced<R>, K>;
 template<std::meta::info R> concept has_annotations = requires { mb::reflect<R>.get_annotations(); };
 template<std::meta::info R> concept has_identifier = requires { mb::reflect<R>.get_identifier(); };
-template<std::meta::info R> concept has_single_letter = requires { mb::reflect<R>.has_single_letter(); };
+template<typename K> concept has_single_letter = requires(K kind) { kind.has_single_letter(); };
 
 static_assert(gives<^^x, mb::variable> && gives<^^fn, mb::function> && gives<^^int, mb::arithmetic_type>);
 static_assert(gives<^^Color, mb::enum_type> && gives<^^Color::red, mb::enumerator> && gives<^^Shape, mb::class_type>);
@@ -110,7 +132,9 @@ static_assert(!has_identifier<value_info> && !has_identifier<base_info> && has_i
 
 static_assert(std::same_as<deduced<std::meta::info{}>, mb::basic_interface<ab::displayable>>);
 
-static_assert(mb::reflect<^^x>.has_single_letter() && !has_single_letter<^^fn>);
+static_assert(extra::reflect<^^x>.has_single_letter() && extra::reflect<^^x>.get_identifier() == "x");
+static_assert(!has_single_letter<decltype(extra::reflect<^^fn>)> && !has_single_letter<deduced<^^x>>);
+static_assert(std::convertible_to<decltype(extra::reflect<^^x>), deduced<^^x>>);
 
 static_assert(mb::try_make_reflection<mb::basic_interface<ab::annotatable>>(^^std::vector).error().u8message()
               .ends_with(u8" cannot have annotations"));
@@ -124,9 +148,9 @@ static_assert(mb::try_make_reflection<mb::basic_interface<ab::callable>>(^^x).er
               u8"reflection 'x' cannot be called");
 static_assert(mb::try_make_reflection<mb::basic_interface<ab::signature>>(constructor_info).error().u8message()
               .ends_with(u8" cannot have a return type"));
-static_assert(!mb::basic_interface<ab::unexplained>::holds(^^x) &&
-              mb::try_make_reflection<mb::basic_interface<ab::unexplained>>(^^x).error().u8message() ==
-              u8"reflection 'x' does not have the ability 'metalib::ability::unexplained'");
+static_assert(!mb::basic_interface<extra::unexplained>::holds(^^x) &&
+              mb::try_make_reflection<mb::basic_interface<extra::unexplained>>(^^x).error().u8message() ==
+              u8"reflection 'x' does not have the ability 'extra::unexplained'");
 
 consteval int count_with_offset() {
     int count = 0;
@@ -152,8 +176,100 @@ consteval std::vector<std::string_view> names_of(std::meta::info ability) {
     }
     return names;
 }
+consteval std::vector<std::meta::info> registered_abilities() {
+    return mb::details::registered_in(mb::builtin_auto_ability_registry);
+}
+consteval bool every_ability_is_registered() {
+    std::vector<std::meta::info> const registered = registered_abilities();
+    for (std::meta::info member: std::meta::members_of(^^ab, std::meta::access_context::unchecked())) {
+        if (std::meta::is_type(member) && !std::meta::is_type_alias(member) &&
+            !std::ranges::contains(registered, member)) {
+            return false;
+        }
+    }
+    return true;
+}
+static_assert(every_ability_is_registered() && registered_abilities().size() == 48);
+static_assert(mb::details::registered_in(frozen_registry).size() == 1 &&
+              mb::details::registered_in(extra::built).size() == 49 &&
+              mb::details::registered_in(composed_registry).size() == 49);
+static_assert(mb::collect_abilities<^^composed::q, composed_registry> == extra::reflect<^^composed::q>);
+static_assert(mb::collect_abilities<^^composed::q, composed_registry>.has_single_letter());
+static_assert(std::meta::members_of(^^frozen, std::meta::access_context::unchecked()).size() == 2);
+
+consteval std::string mismatches() {
+    std::vector<std::meta::info> const samples = {
+        ^^x, ^^five, ^^fn, ^^int, ^^int *, ^^int &, ^^void (), ^^Color, ^^Color::red, ^^Base, ^^Shape, ^^Either,
+        ^^Shape::side, ^^Shape::count, ^^Shape::draw, ^^Shape::reset, ^^Shape::Nested, ^^Shape::Alias,
+        ^^Shape::Member, ^^Pair::swap, ^^outer, ^^outer::inner, ^^outer_alias, ^^::, ^^std::vector,
+        ^^std::vector<int>, ^^zero, ^^Any, ^^zero<int>, ^^first_part, constructor_info, destructor_info, array_info,
+        value_info, object_info, annotation_info, parameter_info, base_info, description_info, std::meta::info{},
+        ^^plain_value, ^^Plain, ^^Bits::flag, ^^Bits::inner_value, ^^Bits::Inner, ^^versioned, ^^inlined, ^^hidden,
+        ^^Renamed, ^^Shape::Nested *, ^^int[3], ^^decltype([] {})};
+    auto const is_typed_as = [](std::meta::info ability) {
+        return std::meta::has_template_arguments(ability) && std::meta::template_of(ability) == ^^ab::typed_as;
+    };
+    std::string text;
+    for (std::meta::info sample: samples) {
+        std::vector<std::meta::info> collected =
+            std::meta::template_arguments_of(mb::details::collected_kind<mb::builtin_auto_ability_registry>(sample));
+        bool const typed = std::erase_if(collected, is_typed_as) != 0;
+        std::vector<std::meta::info> expected;
+        template for (constexpr std::meta::info ability:
+                      std::define_static_array(mb::details::registered_in(mb::builtin_auto_ability_registry))) {
+            if (mb::details::ability_holds<typename [:ability:]>(sample) && !(typed && ability == ^^ab::constant)) {
+                expected.push_back(ability);
+            }
+        }
+        if (collected != expected) {
+            text += std::meta::display_string_of(sample);
+            text += ": collected";
+            for (std::meta::info ability: collected) {
+                text += " ";
+                text += std::meta::display_string_of(ability);
+            }
+            text += ", expected";
+            for (std::meta::info ability: expected) {
+                text += " ";
+                text += std::meta::display_string_of(ability);
+            }
+            text += "; ";
+        }
+    }
+    return text;
+}
+constexpr std::string_view mismatched = std::define_static_string(mismatches());
+static_assert(mismatched.empty(), mismatched);
+
+consteval std::u8string not_a_registry_message() {
+    try {
+        mb::details::registered_in(^^extra::registry);
+    } catch (mb::meta_exception const &failure) {
+        return std::u8string(failure.error().u8message());
+    }
+    return {};
+}
+consteval std::u8string cycle_message(std::meta::info root) {
+    try {
+        mb::build_registry_from_namespace(root);
+    } catch (mb::meta_exception const &failure) {
+        return std::u8string(failure.error().u8message());
+    }
+    return {};
+}
+consteval std::u8string quoted(std::meta::info r) {
+    return u8"'" + std::u8string(std::meta::u8display_string_of(r)) + u8"'";
+}
+static_assert(cycle_message(^^mb::builtin::auto_ability_root).empty() && cycle_message(^^extra::registry).empty());
+static_assert(not_a_registry_message() ==
+              quoted(^^extra::registry) + u8" is not an ability registry made by build_registry_from_namespace");
+static_assert(cycle_message(^^hollow) == u8"ability registry " + quoted(^^hollow::nothing) + u8" has no entries");
+static_assert(cycle_message(^^cyclic) ==
+              u8"ability registry " + quoted(^^cyclic) + u8" has a cycle: " + quoted(^^cyclic) + u8" contains " +
+              quoted(^^cyclic::inner) + u8" contains " + quoted(^^cyclic));
+
 consteval std::vector<std::meta::info> conflicting_pairs() {
-    std::vector<std::meta::info> const abilities = mb::details::abilities_marked(^^mb::auto_ability_t);
+    std::vector<std::meta::info> const abilities = registered_abilities();
     std::vector<std::vector<std::string_view>> names;
     for (std::meta::info ability: abilities) {
         names.push_back(names_of(ability));

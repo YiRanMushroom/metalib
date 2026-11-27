@@ -15,7 +15,7 @@ title = "Status"
 - User docs: README.md and docs/reference.md (written against handle.hpp; edit them when kinds/abilities change).
 
 ## Verified
-- GCC trunk (C:/mingw64-gcc-trunk, gcc-17-20261122) on Windows: CMake build + ctest 17/17 (src/test, one executable
+- GCC trunk (C:/mingw64-gcc-trunk, gcc-17-20261122) on Windows: CMake build + ctest 18/18 (src/test, one executable
   per file, mostly static_asserts; identifier_test also built with METALIB_HAS_META_EXCEPTION=0), 2026-11-26.
 - Not verified: any clang (clang-p2996 still uses the old consteval-only type model and is expected to reject parts),
   GCC 16.x (rejects meta_result with info), compile-time cost on large code.
@@ -89,11 +89,18 @@ title = "Status"
   get_annotations_with_type<T>(). See [[design.misc-queries]]. CLion evaluator bugs reported, see [[build.cmake-setup]].
 - Done 2026-11-26 (commit 7b83d5d, pushed): mb::reflect<^^x> deduces the kind (reflect.hpp, [[design.kind-deduction]]);
   the former reflect<K>(r) / try_reflect<K>(r) are make_reflection<K>(r) / try_make_reflection<K>(r); every ability
-  has a check and the [[=auto_ability]] mark; member and namespace_member lost annotatable; tests use reflect<^^x> at
+  has a check; member and namespace_member lost annotatable; tests use reflect<^^x> at
   literal sites; new reflect_test.cpp. Full build + ctest 17/17.
-- Under discussion with the user (wanted for structure, not speed): describe which abilities are tried as a tree of
-  namespaces (a marked check function per namespace, type aliases to the abilities, namespace aliases to reuse a
-  block, alias templates taking std::meta::info for parametrised abilities), reflect<R> =
-  collect_abilities<R, root>. A probe of this compiles on GCC trunk; nothing is implemented, see
-  [[design.kind-deduction]].
+- Done 2026-11-26 (uncommitted): the abilities tried by reflect<R> are a registry of namespaces,
+  metalib::builtin::auto_ability_root (gate functions marked [[=auto_ability_checker]], type aliases to the abilities,
+  namespace aliases for shared blocks, an alias template for typed_as); reflect<R> =
+  collect_abilities<R, builtin_auto_ability_registry>; the [[=auto_ability]] class mark is gone; users extend with a
+  root of their own. Full build + ctest 17/17. See [[design.kind-deduction]].
+- Done 2026-11-26 (uncommitted): named module. `[[=metalib::exported]]` marks (exported.hpp), generator
+  src/lib/module/generate_module.cpp run at configure time, target metalib::module (METALIB_BUILD_MODULE),
+  module_test. metalib::builtin is not exported; the collector scans a built registry
+  (build_registry_from_namespace; builtin_auto_ability_registry is a constexpr variable in reflect.hpp), and a user
+  registry holds the built-in one through a constexpr info variable. Full build + ctest 18/18. See [[build.cmake-setup]],
+  [[design.kind-deduction]]; measurements in [[build.compile-cost]].
+- Waiting for the user: commit and push of the registry and module work.
 - Clang support once clang adopts P4101.

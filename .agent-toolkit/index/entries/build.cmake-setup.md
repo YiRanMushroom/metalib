@@ -43,6 +43,26 @@ Non-obvious points:
   `cmake-build-debug` profile fails. See [[reflection.expansion-statements]] for what each compiler accepts.
 - Toolchain verified: C:/mingw64-gcc-16.1 g++ 16.1.0, plus CMake 4.4.2 and ninja bundled with CLion 2026.3.
 
+## Named module target (2026-11-26, the user's design)
+- `METALIB_BUILD_MODULE` (default: PROJECT_IS_TOP_LEVEL) adds `metalib_module` / `metalib::module`: a static library
+  with one module interface, `<build>/src/lib/module/metalib.cppm`, linking `metalib` PUBLIC. CMake's own module
+  support builds it (FILE_SET CXX_MODULES, Ninja, GCC trunk on MinGW: works).
+- The interface is generated at configure time: `src/lib/module/generate_module.cpp` is compiled and run by
+  execute_process (the compiler's directory is prepended to PATH for its runtime DLLs; the program writes the file
+  itself in binary mode, since stdout would turn \n into \r\n). It is redone when a header or the generator is newer
+  than `generated.cppm`; the headers are CMAKE_CONFIGURE_DEPENDS, so a build reconfigures after an edit;
+  configure_file(COPYONLY) keeps metalib.cppm's timestamp when the text did not change.
+- What is exported: the nearest `[[=metalib::exported]]` / `[[=metalib::exported(false)]]` mark, the entity's own or an
+  enclosing namespace's (exported.hpp marks `metalib` and unmarks `metalib::details`; reflect.hpp unmarks
+  `metalib::builtin`; importers use the value of builtin_auto_ability_registry, see [[design.kind-deduction]]; the
+  generator appends `details::builtin_registry_kind`, which only saves importers the instantiation, see
+  [[build.compile-cost]]). Templates cannot be queried for
+  annotations (annotations_of throws; a specialization can), which is why the mark goes on namespaces. GCC lists
+  deduction guides as members named `__dguide_<class>`: names starting with two underscores are skipped.
+- An unnamed namespace cannot be the marked wrapper: its members have internal linkage and cannot be exported.
+- `module_test` (src/test, plain executable without header units or Catch2) imports the module; every check is a
+  static_assert.
+
 ## CLion code insight (checked through the CLion MCP, 2026-11-25)
 - CLion analyses with the MinGW-trunk toolchain (profile Debug-MinGW-trunk, -std=gnu++26 -freflection) and its engine
   (ReSharper C++) does evaluate splices, substitute, dealias, template_arguments_of, display_string_of, size_of,

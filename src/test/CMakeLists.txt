@@ -58,3 +58,14 @@ endforeach()
 # identifier checks again with the path for compilers without std::meta::exception
 metalib_add_test(identifier_no_meta_exception_test identifier_test.cpp)
 target_compile_definitions(identifier_no_meta_exception_test PRIVATE METALIB_HAS_META_EXCEPTION=0)
+
+# the generated named module, without header units: every check is a static_assert in the importing file
+if(TARGET metalib_module)
+    add_executable(module_test module_test.cpp)
+    target_link_libraries(module_test PRIVATE metalib::module)
+    add_test(NAME "module_test: import metalib" COMMAND module_test)
+    if(dl_paths)
+        set_tests_properties("module_test: import metalib" PROPERTIES
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${dl_paths}")
+    endif()
+endif()

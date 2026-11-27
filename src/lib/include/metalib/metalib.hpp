@@ -1,5 +1,7 @@
 #pragma once
 
+#include <metalib/exported.hpp>
+
 #include <metalib/cache.hpp>
 #include <metalib/handle.hpp>
 #include <metalib/literal.hpp>

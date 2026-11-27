@@ -56,7 +56,9 @@ something computed, `make_` for something constructed. An operation that cannot 
 
 | Call | Result |
 |---|---|
-| `reflect<R>` | variable template (`<metalib/reflect.hpp>`): the reflection `R` with every ability that holds for it, see [Deduced kinds](#deduced-kinds-reflectr) |
+| `reflect<R>`, `collect_abilities<R, Registry>` | variable templates (`<metalib/reflect.hpp>`): the reflection `R` with every ability the registry gives for it, see [Deduced kinds](#deduced-kinds-reflectr) |
+| `build_registry_from_namespace(ns)` | the registry (a `std::meta::info`) read from a namespace as it is at the call |
+| `builtin_auto_ability_registry` | the registry built from `builtin::auto_ability_root` |
 | `try_make_reflection<K>(r)` | `meta_result<K>`: `handle{r}.try_into<K>()` |
 | `make_reflection<K>(r)` | `K`: `try_make_reflection<K>(r).unwrap()` |
 | `h.try_into<K>()`, `K::try_from(h)` | `meta_result<K>`, failing with the first unmet requirement |
@@ -106,29 +108,70 @@ The other abilities say what a reflection is; their requirement is given with ea
 
 ### Deduced kinds: `reflect<R>`
 
-`reflect<R>` is `basic_interface<A...>` for every ability `A` in namespace `metalib::ability` that is marked
-`[[=auto_ability]]` and whose `check(R)` is true (abilities in canonical order, so the type is the same kind a
-`with_ability` of them gives). A value, an object or an annotation gets `typed_as<T>` for its type in place of
-`constant`, so the result converts to `typed_constant<T>`, `typed_object<T>` or `typed_annotation<T>` (and not to
-`constant`, `value`, `object` or `annotation`, which have the generic `extract<T>()`). An object of array type keeps
-`constant` and converts to `object`. The null reflection gives `basic_interface<ability::displayable>`.
+`reflect<R>` is `collect_abilities<R, builtin_auto_ability_registry>` (`<metalib/reflect.hpp>`).
+`collect_abilities<R, Registry>` is `basic_interface<A...>` for the abilities a **registry** gives for `R`. A
+registry is made from a namespace by `build_registry_from_namespace(^^ns)`, which reads it like this:
+
+| entry of the namespace | meaning |
+|---|---|
+| a function marked `[[=auto_ability_checker]]`, `consteval bool check(std::meta::info)` | the namespace is entered only when it returns true; without one it is always entered |
+| a type alias (or a class) | an ability, kept when its own `check(R)` is true |
+| a nested namespace or a namespace alias | another registry, entered in turn; an alias reuses a block in several places |
+| a `constexpr std::meta::info` variable holding a registry | that registry, entered in turn |
+| an alias template with one `std::meta::info` parameter | an ability computed from `R`: kept when `R` can be substituted, so its requires-clause is its check |
+
+`build_registry_from_namespace` returns the reflection of a class that lists the entries; the namespaces inside
+become such classes in turn. The registry is what the namespaces contained at the call: `constexpr std::meta::info
+registry = build_registry_from_namespace(^^ns);` is evaluated where that variable is defined, and what is declared
+in the namespaces later is not part of it. The namespaces must not form a cycle, whatever the checks return: a cycle
+is an error of the call, naming the namespaces on it, and so is a namespace without entries. A built registry cannot
+contain a cycle, so collecting keeps no record of where it has been.
+
+`builtin::auto_ability_root` holds only aliases to the abilities of `metalib::ability`, grouped by what a reflection
+is:
+
+| namespace | entered for | abilities |
+|---|---|---|
+| (root) | everything | `displayable` |
+| `types` | types | `type_entity`, `type_traits`, `type_transforms`, `type_alias`, `non_alias`, `arithmetic`, `enumeration`, `sized`, `templated`, `annotatable`, **named**, **class member**, **namespace member** |
+| `types::class_and_union_types` | class and union types | `record`, `class_record`, `union_record` |
+| `variables` | variables | `variable_entity`, `static_data`, `typed`, `sized`, `templated`, `annotatable`, `linkage`, `storage_duration`, `constant`, **named**, **class member**, **namespace member** |
+| `functions` | functions | `callable`, `signature`, `function_entity`, `typed`, `templated`, `annotatable`, `linkage`, `constant`, **named**, **namespace member** |
+| `functions::member_functions` | member functions | `class_member`, `accessible`, `nonstatic_function`, `static_function`, `constructor_entity`, `destructor_entity`, `virtual_specifier`, `override_specifier`, `explicit_specifier` |
+| `nonstatic_data_members` | non-static data members | `nonstatic_data`, `typed`, `sized`, `annotatable`, `constant`, **named**, **class member** |
+| `templates` | templates | `template_entity`, `linkage`, **named**, **class member**, **namespace member** |
+| `namespaces` | namespaces and namespace aliases | `namespace_entity`, `namespace_alias_entity`, `annotatable`, **named**, **namespace member** |
+| `enumerators` | enumerators | `enumerator_entity`, `typed`, `constant`, `annotatable`, **named**, **class member**, **namespace member** |
+| `parameters` | function parameters | `parameter_entity`, `typed`, `annotatable`, **named** |
+| `bases` | base class relationships | `base_entity`, `typed`, `sized`, `annotatable`, `accessible`, `virtual_specifier`, `parented` |
+| `structured_bindings` | structured bindings | `structured_binding_entity`, **named**, **namespace member** |
+| `data_member_descriptions` | data member descriptions | `data_member_description_entity`, `identifiable`, `typed`, `sized` |
+| `constants` | values, objects, annotations | `constant_entity`, `value_entity`, `object_entity`, `annotation_entity`, `typed`, `sized`, and `typed_as<T>` for the type of `R` (an alias template) |
+| `constants::arrays` | constants of array type | `constant` (in place of `typed_as<T>`, which cannot return an array) |
+
+The blocks in bold are namespaces of `metalib::builtin` reused through namespace aliases: `named_entities`
+(`identifiable`, `parented`), `class_members` (entered for class members: `class_member`, `accessible`) and
+`namespace_members` (entered for namespace members: `namespace_member_entity`).
+
+Each ability's own `check` stays complete, because narrowing calls it without a registry; a namespace's check only
+groups abilities and skips the ones that cannot apply. So a value, an object or an annotation converts to
+`typed_constant<T>`, `typed_object<T>` or `typed_annotation<T>` (and not to `constant`, `value`, `object` or
+`annotation`, which have the generic `extract<T>()`); an object of array type converts to `object`. The null
+reflection gives `basic_interface<ability::displayable>`.
 
 `R` must be a constant expression; use `make_reflection<K>(r)` for a reflection that is not. The exact type changes
 when an ability is added, so rely on the conversion to a named kind, not on the type itself.
 
-To add an ability of your own, declare it in `metalib::ability` before `reflect` is first used in the translation
-unit, identically in every translation unit:
+A registry of your own holds the built-in one and adds entries:
 
 ```cpp
-namespace metalib::ability {
-    struct [[=auto_ability]] single_letter {
-        static constexpr std::u8string_view requirement = u8"an entity with a one-letter name";
-        static consteval bool check(std::meta::info r) {
-            return std::meta::has_identifier(r) && std::meta::identifier_of(r).size() == 1;
-        }
-        consteval bool has_single_letter(this handle const &) { return true; }
-    };
+namespace my_abilities {
+    constexpr std::meta::info builtin = metalib::builtin_auto_ability_registry;
+    using single_letter = my::single_letter;
 }
+constexpr std::meta::info my_registry = metalib::build_registry_from_namespace(^^my_abilities);
+template<std::meta::info R>
+constexpr auto my_reflect = metalib::collect_abilities<R, my_registry>;
 ```
 
 ### `identifiable`
@@ -438,3 +481,22 @@ Kind checks read "reflection '<display>' is not <requirement>"; preconditions a 
   template argument and in `template for`; converts to `std::span<T const>`.
 - `string_literal` / `u8string_literal`: structural null-terminated strings over `define_static_string`;
   convert to `std::string_view` / `std::u8string_view`, compare with string views.
+
+## Named module
+
+| Name | Meaning |
+|---|---|
+| `exported`, `exported(false)` (`<metalib/exported.hpp>`) | annotation values of type `exported_t`: `[[=metalib::exported]]` marks an entity, or a namespace with everything in it, for the generated module; `[[=metalib::exported(false)]]` excludes one. The nearest mark decides: the entity's own, else that of the closest enclosing namespace. |
+| `metalib::module` (CMake target, `METALIB_BUILD_MODULE`) | the module `metalib`, linking `metalib::metalib` publicly |
+
+`metalib.cppm` is written at configure time by `src/lib/module/generate_module.cpp` and again when a header changes.
+For each namespace it holds `export namespace N { using ::N::name; ... }`, with namespace aliases declared again. A
+template cannot carry a mark of its own (its annotations cannot be queried), so templates are exported through the
+mark of their namespace. Names beginning with two underscores and entities without a name are left out.
+
+`metalib::builtin` is not exported. `members_of` in an importing file sees only exported declarations, but
+`builtin_auto_ability_registry` was built in the header, where the namespaces are declared, so importers use its
+value and `reflect<R>` works through the module, as does a registry of the importer's own that holds it. The
+interface also ends with a function that names `details::collected_kind<builtin_auto_ability_registry>`, so that
+the collector is instantiated once in the module and not in every importer.
+
