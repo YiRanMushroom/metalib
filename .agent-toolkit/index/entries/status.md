@@ -91,16 +91,17 @@ title = "Status"
   the former reflect<K>(r) / try_reflect<K>(r) are make_reflection<K>(r) / try_make_reflection<K>(r); every ability
   has a check; member and namespace_member lost annotatable; tests use reflect<^^x> at
   literal sites; new reflect_test.cpp. Full build + ctest 17/17.
-- Done 2026-11-26 (uncommitted): the abilities tried by reflect<R> are a registry of namespaces,
+- Done 2026-11-26 (commit 1e919d9, pushed): the abilities tried by reflect<R> are a registry of namespaces,
   metalib::builtin::auto_ability_root (gate functions marked [[=auto_ability_checker]], type aliases to the abilities,
   namespace aliases for shared blocks, an alias template for typed_as); reflect<R> =
   collect_abilities<R, builtin_auto_ability_registry>; the [[=auto_ability]] class mark is gone; users extend with a
   root of their own. Full build + ctest 17/17. See [[design.kind-deduction]].
-- Done 2026-11-26 (uncommitted): named module. `[[=metalib::exported]]` marks (exported.hpp), generator
+- Done 2026-11-26 (commit 1e919d9, pushed; export review in the commit after it): named module. `[[=metalib::exported]]` marks (exported.hpp), generator
   src/lib/module/generate_module.cpp run at configure time, target metalib::module (METALIB_BUILD_MODULE),
   module_test. metalib::builtin is not exported; the collector scans a built registry
   (build_registry_from_namespace; builtin_auto_ability_registry is a constexpr variable in reflect.hpp), and a user
   registry holds the built-in one through a constexpr info variable. Full build + ctest 18/18. See [[build.cmake-setup]],
   [[design.kind-deduction]]; measurements in [[build.compile-cost]].
-- Waiting for the user: commit and push of the registry and module work.
+- Idea from the user (2026-11-26): the exported marks and the generator could later help users generate source
+  files at compile time for their own code; nothing built for it yet (the generator walks only ^^metalib).
 - Clang support once clang adopts P4101.

@@ -107,7 +107,9 @@ constexpr mb::class_type cls = mb::reflect<^^point>;              // converts to
   such a tree into a registry (a `std::meta::info`); the header does that once, in
   `mb::builtin_auto_ability_registry`, and `mb::reflect<R>` is
   `mb::collect_abilities<R, mb::builtin_auto_ability_registry>`. A registry holds what its namespaces contained
-  where it was built. To add abilities of your own, build a registry that contains the built-in one:
+  where it was built; it fixes where they are read and is not a cache (collecting costs the same either way).
+  To add abilities of your own, build a registry that contains the built-in one
+  (see [Declaring and building a registry](docs/reference.md#declaring-and-building-a-registry)):
 
 ```cpp
 namespace my_abilities {

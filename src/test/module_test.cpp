@@ -35,7 +35,12 @@ namespace mine {
     };
     namespace abilities {
         constexpr std::meta::info builtin = mb::builtin_auto_ability_registry;
-        using single_letter = mine::single_letter;
+        namespace named {
+            [[=mb::auto_ability_checker]] consteval bool check(std::meta::info r) {
+                return std::meta::has_identifier(r);
+            }
+            using single_letter = mine::single_letter;
+        }
     }
     constexpr std::meta::info registry = mb::build_registry_from_namespace(^^abilities);
     int x = 0;

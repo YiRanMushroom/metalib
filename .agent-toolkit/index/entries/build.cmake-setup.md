@@ -60,6 +60,18 @@ Non-obvious points:
   annotations (annotations_of throws; a specialization can), which is why the mark goes on namespaces. GCC lists
   deduction guides as members named `__dguide_<class>`: names starting with two underscores are skipped.
 - An unnamed namespace cannot be the marked wrapper: its members have internal linkage and cannot be exported.
+- Exports reviewed 2026-11-26: the tag types are not exported, only their values (`exported`,
+  `auto_ability_checker`). auto_ability_checker_t carries `[[=exported(false)]]` itself; exported_t cannot mark
+  itself, so it lives in details. A mark on a redeclaration after the definition (`struct [[=exported(false)]]
+  exported_t;`) does not work on GCC trunk: "type attributes ignored after type is already defined", annotations_of
+  gives 0 (a forward declaration before the definition gives 1; functions accumulate over redeclarations). The
+  standard says the attribute appertains to the class ([dcl.type.elab]/2) and annotations_of covers each declaration
+  of the entity, so this looks like a GCC bug; not reported.
+- Still exported although the docs never name them: basic_string_literal, basic_predicate, basic_transform. They are
+  templates (no mark of their own) and the types of public values.
+- Namespace aliases (probed): the generator's `export namespace N { namespace a = ::target; }` is what an importer
+  needs; without it N::a is not declared; a using-declaration cannot name a namespace; an exported alias shows only
+  those members of its target that are exported themselves.
 - `module_test` (src/test, plain executable without header units or Catch2) imports the module; every check is a
   static_assert.
 

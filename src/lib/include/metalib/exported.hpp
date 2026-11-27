@@ -1,15 +1,17 @@
 #pragma once
 
 namespace metalib {
-    struct exported_t {
-        bool value = true;
+    namespace details {
+        struct exported_t {
+            bool value = true;
 
-        constexpr exported_t operator()(bool exported) const {
-            return {exported};
-        }
-    };
+            constexpr exported_t operator()(bool exported) const {
+                return {exported};
+            }
+        };
+    }
 
-    inline constexpr exported_t exported{};
+    inline constexpr details::exported_t exported{};
 }
 
 namespace [[=metalib::exported]] metalib {

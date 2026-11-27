@@ -12,7 +12,7 @@
 #include <vector>
 
 namespace metalib {
-    struct auto_ability_checker_t {
+    struct [[=exported(false)]] auto_ability_checker_t {
     };
 
     inline constexpr auto_ability_checker_t auto_ability_checker{};

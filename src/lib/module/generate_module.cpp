@@ -20,9 +20,10 @@ namespace {
 
     consteval std::optional<bool> mark_of(std::meta::info r) {
         try {
-            std::vector<std::meta::info> const marks = std::meta::annotations_of_with_type(r, ^^metalib::exported_t);
+            std::vector<std::meta::info> const marks =
+                std::meta::annotations_of_with_type(r, ^^metalib::details::exported_t);
             if (!marks.empty()) {
-                return std::meta::extract<metalib::exported_t>(marks.back()).value;
+                return std::meta::extract<metalib::details::exported_t>(marks.back()).value;
             }
         } catch (std::meta::exception const &) {
         }

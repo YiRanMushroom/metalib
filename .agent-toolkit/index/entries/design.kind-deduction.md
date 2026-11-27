@@ -54,7 +54,9 @@ Built registries (the user's design, 2026-11-26; replaced lazy scanning and the 
 - A namespace without entries is an error of the build ("ability registry 'x' has no entries").
 - Trap: `^^std::meta::info` reflects the alias; compare a type with `dealias(^^std::meta::info)`.
 - Cost (GCC trunk): include-only 230M -> 238M; 300 reflections 301M -> 319M; 30 mixed reflections 291M. The
-  define_aggregate version measured 239M / 322M.
+  define_aggregate version measured 239M / 322M. A built registry is not a cache: reading its template arguments
+  costs what asking the compiler for a namespace's members costs; it only fixes where the namespaces are read
+  (the user's observation, stated in docs/reference.md "Declaring and building a registry").
 
 Implementation notes (measured on GCC trunk)
 - collect_from<Registry, Root> is one function template per namespace; the template for over its members is expanded

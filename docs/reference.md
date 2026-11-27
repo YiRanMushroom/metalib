@@ -162,17 +162,51 @@ reflection gives `basic_interface<ability::displayable>`.
 `R` must be a constant expression; use `make_reflection<K>(r)` for a reflection that is not. The exact type changes
 when an ability is added, so rely on the conversion to a named kind, not on the type itself.
 
-A registry of your own holds the built-in one and adds entries:
+#### Declaring and building a registry
+
+A registry of your own is declared as a namespace, built once, and then used to collect:
 
 ```cpp
-namespace my_abilities {
-    constexpr std::meta::info builtin = metalib::builtin_auto_ability_registry;
-    using single_letter = my::single_letter;
+namespace my {
+    struct single_letter {
+        static constexpr std::u8string_view requirement = u8"an entity with a one-letter name";
+        static consteval bool check(std::meta::info r) {
+            return std::meta::has_identifier(r) && std::meta::identifier_of(r).size() == 1;
+        }
+        consteval bool has_single_letter(this metalib::handle const &) { return true; }
+    };
 }
+
+namespace my_abilities {
+    // the built-in registry, entered like a nested namespace
+    constexpr std::meta::info builtin = metalib::builtin_auto_ability_registry;
+
+    namespace named {
+        // the gate of this namespace: its entries are tried only when it returns true
+        [[=metalib::auto_ability_checker]] consteval bool check(std::meta::info r) {
+            return std::meta::has_identifier(r);
+        }
+        using single_letter = my::single_letter;
+    }
+}
+
+// reads my_abilities and the namespaces in it, here
 constexpr std::meta::info my_registry = metalib::build_registry_from_namespace(^^my_abilities);
+
 template<std::meta::info R>
 constexpr auto my_reflect = metalib::collect_abilities<R, my_registry>;
+
+int x = 0;
+static_assert(my_reflect<^^x>.has_single_letter() && my_reflect<^^x>.get_identifier() == "x");
 ```
+
+Build a registry in a variable that is not a template, as above: its initializer is evaluated where the variable is
+defined, so the registry is the same wherever it is used. This is what makes the built-in registry work through the
+named module, where an importing file cannot see the members of `metalib::builtin`.
+
+A registry is not a cache. Building one asks the compiler for the members of each namespace once, and collecting
+from it costs what collecting from the namespaces directly would: on GCC trunk a file with 300 `reflect<^^x>` takes
+the same time and memory within a few percent either way. What a registry fixes is where the namespaces are read.
 
 ### `identifiable`
 `has_identifier`, `has_u8identifier`, `try_get_identifier` / `get_identifier`,
@@ -486,7 +520,7 @@ Kind checks read "reflection '<display>' is not <requirement>"; preconditions a 
 
 | Name | Meaning |
 |---|---|
-| `exported`, `exported(false)` (`<metalib/exported.hpp>`) | annotation values of type `exported_t`: `[[=metalib::exported]]` marks an entity, or a namespace with everything in it, for the generated module; `[[=metalib::exported(false)]]` excludes one. The nearest mark decides: the entity's own, else that of the closest enclosing namespace. |
+| `exported`, `exported(false)` (`<metalib/exported.hpp>`) | annotation values: `[[=metalib::exported]]` marks an entity, or a namespace with everything in it, for the generated module; `[[=metalib::exported(false)]]` excludes one. The nearest mark decides: the entity's own, else that of the closest enclosing namespace. |
 | `metalib::module` (CMake target, `METALIB_BUILD_MODULE`) | the module `metalib`, linking `metalib::metalib` publicly |
 
 `metalib.cppm` is written at configure time by `src/lib/module/generate_module.cpp` and again when a header changes.
